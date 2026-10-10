@@ -105,9 +105,9 @@ Deno.serve(async (req: Request) => {
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrPayload)}&margin=10`
 
     const mealLabel = buyer.meal_preference === 'vegetarian'
-      ? 'Vegetarian'
+      ? 'Veg'
       : buyer.meal_preference === 'non_vegetarian'
-      ? 'Non-Vegetarian'
+      ? 'Non-Veg'
       : buyer.meal_preference || 'Standard'
 
     // Replace placeholders

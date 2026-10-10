@@ -39,9 +39,9 @@ export default function TicketModal({ buyer, eventSettings, onClose, onTicketSen
 
   const ticketNum = buyer.ticket_number || `CBA-2026-${buyer.id.substring(0, 4).toUpperCase()}`
   const mealLabel = buyer.meal_preference === 'vegetarian'
-    ? '🥦 Vegetarian'
+    ? '🥦 Veg'
     : buyer.meal_preference === 'non_vegetarian'
-    ? '🍖 Non-Vegetarian'
+    ? '🍖 Non-Veg'
     : '🍽️ Other'
 
   async function handleResendEmail() {

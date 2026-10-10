@@ -31,7 +31,7 @@ interface BuyerListProps {
 
 const MEAL_LABELS: Record<string, string> = {
   non_vegetarian: '🍖 Non-Veg',
-  vegetarian: '🥦 Vegetarian',
+  vegetarian: '🥦 Veg',
   other: '🍽️ Other',
 }
 

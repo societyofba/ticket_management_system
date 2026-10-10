@@ -12,8 +12,8 @@ interface AddBuyerFormProps {
 }
 
 const MEAL_OPTIONS = [
-  { value: 'non_vegetarian', label: '🍖 Non-Vegetarian' },
-  { value: 'vegetarian', label: '🥦 Vegetarian' },
+  { value: 'non_vegetarian', label: '🍖 Non-Veg' },
+  { value: 'vegetarian', label: '🥦 Veg' },
   { value: 'other', label: '🍽️ Other' },
 ] as const
 

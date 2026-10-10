@@ -490,9 +490,9 @@ export default function App() {
                       <Text style={styles.metaLabel}>MEAL OPTION</Text>
                       <Text style={styles.metaValue}>
                         {attendee.meal_preference === 'vegetarian'
-                          ? '🥦 Vegetarian'
+                          ? '🥦 Veg'
                           : attendee.meal_preference === 'non_vegetarian'
-                          ? '🍖 Non-Vegetarian'
+                          ? '🍖 Non-Veg'
                           : '🍽️ Standard'}
                       </Text>
                     </View>

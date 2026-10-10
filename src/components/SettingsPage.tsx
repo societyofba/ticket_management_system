@@ -232,7 +232,7 @@ export default function SettingsPage() {
       .replace(/{{mobile}}/g, '+94 77 123 4567')
       .replace(/{{company}}/g, 'Acme Holdings Ltd.')
       .replace(/{{designation}}/g, 'Chief Financial Officer')
-      .replace(/{{meal_preference}}/g, 'Non-Vegetarian')
+      .replace(/{{meal_preference}}/g, 'Non-Veg')
       .replace(/{{ticket_number}}/g, 'CBA-2026-08AF')
       .replace(/{{payment_ref}}/g, 'PH-98421045')
       .replace(/{{qr_code_url}}/g, sampleQr)
