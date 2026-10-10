@@ -1,9 +1,9 @@
-import { Users, LayoutDashboard, UserPlus, Settings, CreditCard, Lock, LogOut, Shield } from 'lucide-react'
+import { Users, LayoutDashboard, UserPlus, Settings, CreditCard, Lock, LogOut, Shield, ScanLine } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 interface SidebarProps {
-  currentPage: 'dashboard' | 'buyers' | 'payments' | 'add-buyer' | 'settings'
-  onNavigate: (page: 'dashboard' | 'buyers' | 'payments' | 'add-buyer' | 'settings') => void
+  currentPage: 'dashboard' | 'buyers' | 'payments' | 'add-buyer' | 'settings' | 'checkin'
+  onNavigate: (page: 'dashboard' | 'buyers' | 'payments' | 'add-buyer' | 'settings' | 'checkin') => void
 }
 
 export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
@@ -35,6 +35,32 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         </button>
 
         <div className="nav-section-label" style={{ marginTop: 20 }}>Event Operations</div>
+
+        <button
+          className={`nav-link ${currentPage === 'checkin' ? 'active' : ''}`}
+          onClick={() => onNavigate('checkin')}
+          style={{ position: 'relative' }}
+        >
+          <ScanLine className="nav-icon" />
+          <span>Check-In</span>
+          <span
+            style={{
+              marginLeft: 'auto',
+              fontSize: 9,
+              fontWeight: 800,
+              background: 'rgba(34, 197, 94, 0.25)',
+              color: '#4ade80',
+              border: '1px solid rgba(74, 222, 128, 0.3)',
+              padding: '1px 6px',
+              borderRadius: 20,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              animation: 'pulse 2s infinite',
+            }}
+          >
+            LIVE
+          </span>
+        </button>
 
         <button
           className={`nav-link ${currentPage === 'payments' ? 'active' : ''}`}

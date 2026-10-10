@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { Lock, Mail, ArrowRight, Eye, EyeOff, ShieldAlert, KeyRound } from 'lucide-react'
+import { Lock, Mail, ArrowRight, Eye, EyeOff, ShieldAlert } from 'lucide-react'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -241,28 +241,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Credentials Reference Note */}
-        <div
-          style={{
-            marginTop: 28,
-            padding: '14px 16px',
-            background: 'rgba(255, 255, 255, 0.03)',
-            borderRadius: 12,
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            fontSize: 12,
-            color: 'rgba(255, 255, 255, 0.65)',
-            lineHeight: 1.5,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: 'rgba(255, 255, 255, 0.85)', marginBottom: 6 }}>
-            <KeyRound size={13} color="#93c5fd" />
-            <span>Authorized Accounts:</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <div>&bull; <strong style={{ color: '#c4b5fd' }}>Super Admin:</strong> superadmin@cbaforum.lk (Password: super123)</div>
-            <div>&bull; <strong style={{ color: '#93c5fd' }}>Event Admin:</strong> admin@cbaforum.lk (Password: admin123)</div>
-          </div>
-        </div>
       </div>
     </div>
   )

@@ -6,12 +6,13 @@ import AddBuyerForm from './components/AddBuyerForm'
 import BuyerList from './components/BuyerList'
 import PaymentsPage from './components/PaymentsPage'
 import SettingsPage from './components/SettingsPage'
+import CheckInPage from './components/CheckInPage'
 import LoginPage from './components/LoginPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { Shield, LogOut } from 'lucide-react'
 import './index.css'
 
-type Page = 'dashboard' | 'buyers' | 'payments' | 'add-buyer' | 'settings'
+type Page = 'dashboard' | 'buyers' | 'payments' | 'add-buyer' | 'settings' | 'checkin'
 
 const PAGE_TITLES: Record<Page, { title: string; subtitle: string }> = {
   dashboard: { title: 'Dashboard', subtitle: 'Overview of the CBA Forum ticket system' },
@@ -19,6 +20,7 @@ const PAGE_TITLES: Record<Page, { title: string; subtitle: string }> = {
   buyers: { title: 'All Buyers', subtitle: 'Manage and search buyer records' },
   'add-buyer': { title: 'Add Buyer', subtitle: 'Register a new buyer in the system' },
   settings: { title: 'Settings', subtitle: 'Configure event details, email templates, and SMS settings' },
+  checkin: { title: '📡 Check-In Dashboard', subtitle: 'Real-time event day arrival tracking — updates every 5 seconds' },
 }
 
 function MainLayout() {
@@ -127,6 +129,8 @@ function MainLayout() {
           )}
 
           {currentPage === 'settings' && <SettingsPage />}
+
+          {currentPage === 'checkin' && <CheckInPage />}
         </main>
       </div>
     </div>

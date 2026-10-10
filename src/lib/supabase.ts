@@ -47,6 +47,8 @@ export interface Buyer {
   ticket_email_status: 'not_sent' | 'sending' | 'sent' | 'failed'
   ticket_email_sent_at: string | null
   ticket_email_error: string | null
+  checked_in: boolean
+  checked_in_at: string | null
   created_at: string
   updated_at: string
 }
@@ -82,6 +84,8 @@ export type BuyerInsert = Omit<
   | 'ticket_email_status'
   | 'ticket_email_sent_at'
   | 'ticket_email_error'
+  | 'checked_in'
+  | 'checked_in_at'
 > & {
   email_status?: Buyer['email_status']
   email_sent_at?: string | null
@@ -96,5 +100,7 @@ export type BuyerInsert = Omit<
   ticket_email_status?: Buyer['ticket_email_status']
   ticket_email_sent_at?: string | null
   ticket_email_error?: string | null
+  checked_in?: boolean
+  checked_in_at?: string | null
 }
 
