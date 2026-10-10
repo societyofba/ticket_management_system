@@ -192,12 +192,13 @@ CBA Forum Organizing Committee
       },
     })
 
-    const fromName  = (s.email_from_name || SMTP_FROM_NAME).trim()
-    const fromEmail = (s.email_from_address || SMTP_FROM_EMAIL).trim()
+    const fromName     = (s.email_from_name || SMTP_FROM_NAME || 'CBA Forum').trim()
+    const fromEmail    = (SMTP_FROM_EMAIL || SMTP_USER).trim()
+    const replyToEmail = (s.email_from_address || fromEmail).trim()
 
     await transporter.sendMail({
       from: `"${fromName}" <${fromEmail}>`,
-      replyTo: fromEmail,
+      replyTo: replyToEmail,
       to: buyer.email.trim(),
       subject: subject,
       text: plainText,

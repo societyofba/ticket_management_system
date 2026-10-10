@@ -572,7 +572,7 @@ export default function SettingsPage() {
                 onChange={(e) => handleChange('email_from_address', e.target.value)}
                 placeholder="noreply@cbaforum.lk"
               />
-              <p className="form-hint">The sender address shown to recipients.</p>
+              <p className="form-hint">Reply-To address for attendee queries. Deliveries are securely authorized via your SMTP configuration.</p>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Invitation Email Subject</label>
