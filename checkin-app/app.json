@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "CBA Forum Check-In",
+    "slug": "cba-forum-checkin",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cbaforum.checkin"
+    },
+    "android": {
+      "package": "com.cbaforum.checkin",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#0f172a",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "CAMERA"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow CBA Forum Check-In to access camera to scan attendee QR codes."
+        }
+      ],
+      "expo-status-bar"
+    ]
+  }
+}
