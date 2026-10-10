@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import { getBuyers, deleteBuyer, searchBuyers } from '../services/buyerService'
 import { sendBuyerEmail } from '../services/emailService'
+import { sendBuyerSms } from '../services/smsService'
 import { type Buyer } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
 import {
   Search,
-  RefreshCw,
   UserPlus,
   Trash2,
   Users,
@@ -13,13 +14,15 @@ import {
   Mail,
   MailCheck,
   MailX,
-  Phone,
-  Building2,
-  Briefcase,
-  UtensilsCrossed,
   SendHorizonal,
+  MessageCircle,
+  Smartphone,
+  QrCode,
+  Lock,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import TicketModal from './TicketModal'
+import { getSettings } from '../services/emailService'
 
 interface BuyerListProps {
   onAddBuyer: () => void
@@ -42,6 +45,7 @@ type SortField = 'name' | 'email' | 'company' | 'created_at'
 type SortDir = 'asc' | 'desc'
 
 export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps) {
+  const { canDeleteBuyers } = useAuth()
   const [buyers, setBuyers] = useState<Buyer[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -49,17 +53,21 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null)
+  const [sendingSmsId, setSendingSmsId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [selectedTicketBuyer, setSelectedTicketBuyer] = useState<Buyer | null>(null)
+  const [settings, setSettings] = useState<Record<string, string>>({})
 
   const loadBuyers = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await getBuyers()
+    const [bRes, sRes] = await Promise.all([getBuyers(), getSettings()])
     setLoading(false)
-    if (error) {
-      toast.error(`Failed to load buyers: ${error}`)
+    if (bRes.error) {
+      toast.error(`Failed to load buyers: ${bRes.error}`)
       return
     }
-    setBuyers(data ?? [])
+    setBuyers(bRes.data ?? [])
+    if (sRes) setSettings(sRes)
   }, [])
 
   useEffect(() => {
@@ -76,12 +84,8 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
       setLoading(true)
       const { data, error } = await searchBuyers(searchQuery)
       setLoading(false)
-      if (error) {
-        toast.error(`Search failed: ${error}`)
-        return
-      }
-      setBuyers(data ?? [])
-    }, 350)
+      if (!error) setBuyers(data ?? [])
+    }, 300)
     return () => clearTimeout(timer)
   }, [searchQuery, loadBuyers])
 
@@ -95,13 +99,22 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
   }
 
   const sortedBuyers = [...buyers].sort((a, b) => {
-    let valA: string = a[sortField] ?? ''
-    let valB: string = b[sortField] ?? ''
+    let valA = a[sortField] ?? ''
+    let valB = b[sortField] ?? ''
+    if (sortField === 'created_at') {
+      return sortDir === 'asc'
+        ? new Date(valA).getTime() - new Date(valB).getTime()
+        : new Date(valB).getTime() - new Date(valA).getTime()
+    }
     if (sortDir === 'asc') return valA.localeCompare(valB)
     return valB.localeCompare(valA)
   })
 
   async function handleDelete(buyer: Buyer) {
+    if (!canDeleteBuyers) {
+      toast.error('Permission Denied: Only Super Admin can delete buyer records.')
+      return
+    }
     if (!confirm(`Delete buyer "${buyer.name}"? This cannot be undone.`)) return
     setDeletingId(buyer.id)
     const { error } = await deleteBuyer(buyer.id)
@@ -120,7 +133,6 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
     setSendingEmailId(null)
     if (success) {
       toast.success(`Email sent to ${buyer.email}`)
-      // Update local state
       setBuyers((prev) =>
         prev.map((b) =>
           b.id === buyer.id
@@ -138,13 +150,43 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
     }
   }
 
+  async function handleSendSms(buyer: Buyer) {
+    setSendingSmsId(buyer.id)
+    const { success, error } = await sendBuyerSms(buyer.id, buyer)
+    setSendingSmsId(null)
+    if (success) {
+      toast.success(`SMS sent to ${buyer.mobile} via SMSlenz!`)
+      setBuyers((prev) =>
+        prev.map((b) =>
+          b.id === buyer.id
+            ? { ...b, sms_status: 'sent', sms_sent_at: new Date().toISOString(), sms_error: null }
+            : b
+        )
+      )
+    } else {
+      toast.error(`SMS failed: ${error ?? 'Unknown error'}`)
+      setBuyers((prev) =>
+        prev.map((b) =>
+          b.id === buyer.id ? { ...b, sms_status: 'failed', sms_error: error ?? null } : b
+        )
+      )
+    }
+  }
+
+  function openWhatsApp(buyer: Buyer) {
+    const rawNumber = buyer.mobile.replace(/[\s\-\(\)\+]/g, '')
+    const phone = rawNumber.startsWith('0') ? '94' + rawNumber.slice(1) : rawNumber.startsWith('94') ? rawNumber : '94' + rawNumber
+    const text = encodeURIComponent(`Hi ${buyer.name}, you are eligible to participate in CBA Forum 2026. Location: Waters Edge Hotel. Time: 3:00 PM - 7:00 PM. Ticket: LKR 3,000. Book seat: https://pay.cbaforum.lk`)
+    window.open(`https://wa.me/${phone}?text=${text}`, '_blank')
+  }
+
   function SortIcon({ field }: { field: SortField }) {
     if (sortField !== field) return <ChevronDown size={12} style={{ opacity: 0.3 }} />
     return sortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
   }
 
-  function formatDate(dateStr: string) {
-    return new Date(dateStr).toLocaleDateString('en-GB', {
+  function formatDate(iso: string) {
+    return new Date(iso).toLocaleDateString('en-GB', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -158,14 +200,10 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
         <div className="page-header-left">
           <h1>All Buyers</h1>
           <p>
-            {loading ? 'Loading…' : `${buyers.length} buyer${buyers.length !== 1 ? 's' : ''} found`}
+            {buyers.length} registered participant{buyers.length !== 1 ? 's' : ''} for CBA Forum
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-secondary btn-sm" onClick={loadBuyers} disabled={loading}>
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            Refresh
-          </button>
           <button className="btn btn-primary" onClick={onAddBuyer}>
             <UserPlus size={15} />
             Add Buyer
@@ -260,6 +298,7 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
                   <th>Designation</th>
                   <th>Meal</th>
                   <th>Email Status</th>
+                  <th>SMS (SMSlenz)</th>
                   <th
                     onClick={() => handleSort('created_at')}
                     style={{ cursor: 'pointer', userSelect: 'none' }}
@@ -268,159 +307,153 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
                       Added <SortIcon field="created_at" />
                     </span>
                   </th>
-                  <th style={{ width: 60 }}></th>
+                  <th style={{ width: 80 }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {sortedBuyers.map((buyer, idx) => (
-                  <>
-                    <tr
-                      key={buyer.id}
-                      onClick={() => setExpandedId(expandedId === buyer.id ? null : buyer.id)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <td style={{ color: '#b0b8d8', fontSize: 12, fontWeight: 600 }}>
-                        {idx + 1}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div
-                            style={{
-                              width: 34,
-                              height: 34,
-                              borderRadius: '50%',
-                              background: `hsl(${(buyer.name.charCodeAt(0) * 37) % 360}, 65%, 92%)`,
-                              color: `hsl(${(buyer.name.charCodeAt(0) * 37) % 360}, 65%, 35%)`,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: 13,
-                              fontWeight: 700,
-                              flexShrink: 0,
-                            }}
-                          >
-                            {buyer.name.charAt(0).toUpperCase()}
-                          </div>
-                          <span style={{ fontWeight: 600, color: '#1a1f35' }}>{buyer.name}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span style={{ color: '#4b5a8a', fontSize: 13 }}>{buyer.email}</span>
-                      </td>
-                      <td>
-                        <span style={{ color: '#4b5a8a', fontSize: 13 }}>{buyer.mobile}</span>
-                      </td>
-                      <td>
-                        <span style={{ color: '#2c3358', fontWeight: 500 }}>{buyer.company}</span>
-                      </td>
-                      <td>
-                        <span style={{ color: '#4b5a8a', fontSize: 13 }}>{buyer.designation}</span>
-                      </td>
-                      <td>
-                        <span className={`badge ${MEAL_BADGE[buyer.meal_preference] ?? 'badge-gray'}`}>
-                          {MEAL_LABELS[buyer.meal_preference] ?? buyer.meal_preference}
-                        </span>
-                      </td>
-                      <td style={{ fontSize: 12, color: '#8892aa' }}>
-                        {formatDate(buyer.created_at)}
-                      </td>
-                      {/* Email status cell */}
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <EmailStatusBadge
-                          status={buyer.email_status}
-                          sentAt={buyer.email_sent_at}
-                          error={buyer.email_error}
-                          isSending={sendingEmailId === buyer.id}
-                          onResend={() => handleResendEmail(buyer)}
-                        />
-                      </td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          style={{ padding: '5px 10px' }}
-                          onClick={() => handleDelete(buyer)}
-                          disabled={deletingId === buyer.id}
-                          title="Delete buyer"
+                  <tr
+                    key={buyer.id}
+                    onClick={() => setExpandedId(expandedId === buyer.id ? null : buyer.id)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <td style={{ color: '#b0b8d8', fontSize: 12, fontWeight: 600 }}>
+                      {idx + 1}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: '50%',
+                            background: `hsl(${(buyer.name.charCodeAt(0) * 37) % 360}, 65%, 92%)`,
+                            color: `hsl(${(buyer.name.charCodeAt(0) * 37) % 360}, 65%, 35%)`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            flexShrink: 0,
+                          }}
                         >
-                          {deletingId === buyer.id ? (
-                            <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
-                          ) : (
-                            <Trash2 size={13} />
-                          )}
-                        </button>
-                      </td>
-                    </tr>
-
-                    {/* Expanded details row */}
-                    {expandedId === buyer.id && (
-                      <tr key={`${buyer.id}-details`}>
-                        <td colSpan={10} style={{ background: '#f8faff', padding: 0 }}>
-                          <div
-                            style={{
-                              padding: '16px 20px 16px 58px',
-                              display: 'flex',
-                              gap: 32,
-                              flexWrap: 'wrap',
-                            }}
+                          {buyer.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span style={{ fontWeight: 600, color: '#1a1f35' }}>{buyer.name}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span style={{ color: '#4b5a8a', fontSize: 13 }}>{buyer.email}</span>
+                    </td>
+                    <td>
+                      <span style={{ color: '#4b5a8a', fontSize: 13 }}>{buyer.mobile}</span>
+                    </td>
+                    <td>
+                      <span style={{ color: '#2c3358', fontWeight: 500 }}>{buyer.company}</span>
+                    </td>
+                    <td>
+                      <span style={{ color: '#4b5a8a', fontSize: 13 }}>{buyer.designation}</span>
+                    </td>
+                    <td>
+                      <span className={`badge ${MEAL_BADGE[buyer.meal_preference] ?? 'badge-gray'}`}>
+                        {MEAL_LABELS[buyer.meal_preference] ?? buyer.meal_preference}
+                      </span>
+                    </td>
+                    {/* Email status cell */}
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <EmailStatusBadge
+                        status={buyer.email_status}
+                        sentAt={buyer.email_sent_at}
+                        error={buyer.email_error}
+                        isSending={sendingEmailId === buyer.id}
+                        onResend={() => handleResendEmail(buyer)}
+                      />
+                    </td>
+                    {/* SMS status cell */}
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <SmsStatusBadge
+                        status={buyer.sms_status ?? 'not_sent'}
+                        sentAt={buyer.sms_sent_at}
+                        error={buyer.sms_error}
+                        isSending={sendingSmsId === buyer.id}
+                        onSend={() => handleSendSms(buyer)}
+                      />
+                    </td>
+                    <td style={{ fontSize: 12, color: '#8892aa' }}>
+                      {formatDate(buyer.created_at)}
+                    </td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        {buyer.payment_status === 'paid' && (
+                          <button
+                            className="btn btn-sm btn-secondary"
+                            style={{ padding: '5px 8px', color: '#2563eb' }}
+                            onClick={() => setSelectedTicketBuyer(buyer)}
+                            title={`View E-Ticket: ${buyer.ticket_number || ''}`}
                           >
-                            <DetailItem icon={<Mail size={13} />} label="Email" value={buyer.email} />
-                            <DetailItem icon={<Phone size={13} />} label="Mobile" value={buyer.mobile} />
-                            <DetailItem icon={<Building2 size={13} />} label="Company" value={buyer.company} />
-                            <DetailItem icon={<Briefcase size={13} />} label="Designation" value={buyer.designation} />
-                            <DetailItem
-                              icon={<UtensilsCrossed size={13} />}
-                              label="Meal"
-                              value={MEAL_LABELS[buyer.meal_preference] ?? buyer.meal_preference}
-                            />
-                            {buyer.meal_notes && (
-                              <DetailItem icon={null} label="Meal Notes" value={buyer.meal_notes} />
+                            <QrCode size={14} />
+                          </button>
+                        )}
+                        <button
+                          className="btn btn-sm btn-secondary"
+                          style={{ padding: '5px 8px', color: '#16a34a' }}
+                          onClick={() => openWhatsApp(buyer)}
+                          title="Open WhatsApp chat with pre-filled ticket message"
+                        >
+                          <MessageCircle size={14} />
+                        </button>
+                        {canDeleteBuyers ? (
+                          <button
+                            className="btn btn-sm btn-danger"
+                            style={{ padding: '5px 8px' }}
+                            onClick={() => handleDelete(buyer)}
+                            disabled={deletingId === buyer.id}
+                            title="Delete buyer record (Super Admin only)"
+                          >
+                            {deletingId === buyer.id ? (
+                              <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                            ) : (
+                              <Trash2 size={13} />
                             )}
-                            {buyer.special_notes && (
-                              <DetailItem icon={null} label="Special Notes" value={buyer.special_notes} />
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </>
+                          </button>
+                        ) : (
+                          <button
+                            className="btn btn-sm"
+                            style={{
+                              padding: '5px 8px',
+                              background: '#f1f5f9',
+                              color: '#94a3b8',
+                              border: '1px solid #e2e8f0',
+                              cursor: 'not-allowed',
+                              opacity: 0.75,
+                            }}
+                            onClick={() =>
+                              toast.error('Permission Denied: Only Super Admin can delete buyer records.')
+                            }
+                            title="Delete restricted (Super Admin only)"
+                          >
+                            <Lock size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
       </div>
-    </div>
-  )
-}
 
-function DetailItem({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: string
-}) {
-  return (
-    <div style={{ minWidth: 140 }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: '0.6px',
-          textTransform: 'uppercase',
-          color: '#b0b8d8',
-          marginBottom: 3,
-        }}
-      >
-        {icon}
-        {label}
-      </div>
-      <div style={{ fontSize: 13.5, color: '#2c3358', fontWeight: 500 }}>{value}</div>
+      {/* Ticket Modal */}
+      {selectedTicketBuyer && (
+        <TicketModal
+          buyer={selectedTicketBuyer}
+          eventSettings={settings}
+          onClose={() => setSelectedTicketBuyer(null)}
+          onTicketSent={loadBuyers}
+        />
+      )}
     </div>
   )
 }
@@ -482,8 +515,8 @@ function EmailStatusBadge({
           <MailX size={11} /> Failed
         </span>
         {error && (
-          <span style={{ fontSize: 10, color: '#ef4444', maxWidth: 140, wordBreak: 'break-word' }}>
-            {error.slice(0, 60)}{error.length > 60 ? '…' : ''}
+          <span style={{ fontSize: 10, color: '#ef4444', maxWidth: 130, wordBreak: 'break-word' }}>
+            {error.slice(0, 50)}{error.length > 50 ? '…' : ''}
           </span>
         )}
         <button
@@ -497,7 +530,6 @@ function EmailStatusBadge({
     )
   }
 
-  // not_sent or sending (stuck)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <span className="badge badge-gray">
@@ -514,3 +546,90 @@ function EmailStatusBadge({
   )
 }
 
+function SmsStatusBadge({
+  status,
+  sentAt,
+  error,
+  isSending,
+  onSend,
+}: {
+  status: string
+  sentAt: string | null
+  error: string | null
+  isSending: boolean
+  onSend: () => void
+}) {
+  function formatShort(dt: string | null) {
+    if (!dt) return ''
+    return new Date(dt).toLocaleString('en-GB', {
+      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+    })
+  }
+
+  if (isSending) {
+    return (
+      <span className="badge badge-blue" style={{ gap: 5 }}>
+        <span className="spinner" style={{ width: 10, height: 10, borderWidth: 1.5, borderColor: 'rgba(29,78,216,0.3)', borderTopColor: '#1d4ed8' }} />
+        Sending SMS…
+      </span>
+    )
+  }
+
+  if (status === 'sent') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <span className="badge badge-green" title={`SMS sent at ${formatShort(sentAt)}`}>
+          <Smartphone size={11} /> Sent
+        </span>
+        {sentAt && (
+          <span style={{ fontSize: 10, color: '#b0b8d8' }}>{formatShort(sentAt)}</span>
+        )}
+        <button
+          className="btn btn-sm btn-secondary"
+          style={{ padding: '2px 7px', fontSize: 11, marginTop: 2 }}
+          onClick={onSend}
+          title="Resend SMS"
+        >
+          <SendHorizonal size={10} /> Resend
+        </button>
+      </div>
+    )
+  }
+
+  if (status === 'failed') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <span className="badge badge-red" title={error ?? 'SMS failed'}>
+          <Smartphone size={11} /> Failed
+        </span>
+        {error && (
+          <span style={{ fontSize: 10, color: '#ef4444', maxWidth: 130, wordBreak: 'break-word' }}>
+            {error.slice(0, 50)}{error.length > 50 ? '…' : ''}
+          </span>
+        )}
+        <button
+          className="btn btn-sm btn-primary"
+          style={{ padding: '2px 8px', fontSize: 11, marginTop: 2 }}
+          onClick={onSend}
+        >
+          <SendHorizonal size={10} /> Retry
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <span className="badge badge-gray">
+        <Smartphone size={11} /> Not Sent
+      </span>
+      <button
+        className="btn btn-sm btn-primary"
+        style={{ padding: '3px 8px', fontSize: 11 }}
+        onClick={onSend}
+      >
+        <SendHorizonal size={10} /> Send SMS
+      </button>
+    </div>
+  )
+}

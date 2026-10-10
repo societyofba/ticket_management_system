@@ -37,8 +37,64 @@ export interface Buyer {
   email_status: 'not_sent' | 'sending' | 'sent' | 'failed'
   email_sent_at: string | null
   email_error: string | null
+  sms_status: 'not_sent' | 'sending' | 'sent' | 'failed'
+  sms_sent_at: string | null
+  sms_error: string | null
+  payment_status: 'unpaid' | 'pending' | 'paid' | 'refunded'
+  payment_confirmed_at: string | null
+  payment_ref: string | null
+  ticket_number: string | null
+  ticket_email_status: 'not_sent' | 'sending' | 'sent' | 'failed'
+  ticket_email_sent_at: string | null
+  ticket_email_error: string | null
   created_at: string
   updated_at: string
 }
 
-export type BuyerInsert = Omit<Buyer, 'id' | 'created_at' | 'updated_at'>
+export type AdminRole = 'super_admin' | 'admin'
+
+export interface AdminUser {
+  id: string
+  email: string
+  name: string
+  role: AdminRole
+  password?: string
+  avatar?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export type BuyerInsert = Omit<
+  Buyer,
+  | 'id'
+  | 'created_at'
+  | 'updated_at'
+  | 'email_status'
+  | 'email_sent_at'
+  | 'email_error'
+  | 'sms_status'
+  | 'sms_sent_at'
+  | 'sms_error'
+  | 'payment_status'
+  | 'payment_confirmed_at'
+  | 'payment_ref'
+  | 'ticket_number'
+  | 'ticket_email_status'
+  | 'ticket_email_sent_at'
+  | 'ticket_email_error'
+> & {
+  email_status?: Buyer['email_status']
+  email_sent_at?: string | null
+  email_error?: string | null
+  sms_status?: Buyer['sms_status']
+  sms_sent_at?: string | null
+  sms_error?: string | null
+  payment_status?: Buyer['payment_status']
+  payment_confirmed_at?: string | null
+  payment_ref?: string | null
+  ticket_number?: string | null
+  ticket_email_status?: Buyer['ticket_email_status']
+  ticket_email_sent_at?: string | null
+  ticket_email_error?: string | null
+}
+

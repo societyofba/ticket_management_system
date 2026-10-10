@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { createBuyer } from '../services/buyerService'
 import { sendBuyerEmail } from '../services/emailService'
+import { sendBuyerSms } from '../services/smsService'
 import { type BuyerInsert } from '../lib/supabase'
-import { UserPlus, AlertCircle, CheckCircle2, ChevronRight, Mail, XCircle } from 'lucide-react'
+import { UserPlus, AlertCircle, CheckCircle2, ChevronRight, Mail, XCircle, Smartphone } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface AddBuyerFormProps {
@@ -63,6 +64,7 @@ export default function AddBuyerForm({ onSuccess, onNavigateToBuyers }: AddBuyer
   const [submitted, setSubmitted] = useState(false)
   const [createdId, setCreatedId] = useState<string | null>(null)
   const [emailResult, setEmailResult] = useState<'sending' | 'sent' | 'failed' | null>(null)
+  const [smsResult, setSmsResult] = useState<'sending' | 'sent' | 'failed' | null>(null)
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -120,21 +122,35 @@ export default function AddBuyerForm({ onSuccess, onNavigateToBuyers }: AddBuyer
       return
     }
 
-    toast.success('Buyer added! Sending invitation email…')
+    toast.success('Buyer registered! Sending email & SMS…')
     setCreatedId(data?.id ?? null)
     setSubmitted(true)
     onSuccess?.()
 
-    // Auto-send email
+    // Auto-send Email and SMS
     if (data?.id) {
       setEmailResult('sending')
-      const { success, error: emailErr } = await sendBuyerEmail(data.id, data)
-      if (success) {
+      setSmsResult('sending')
+
+      const [emailRes, smsRes] = await Promise.all([
+        sendBuyerEmail(data.id, data),
+        sendBuyerSms(data.id, data),
+      ])
+
+      if (emailRes.success) {
         setEmailResult('sent')
         toast.success('Invitation email sent!')
       } else {
         setEmailResult('failed')
-        toast.error(`Email failed: ${emailErr ?? 'Unknown error'}`)
+        toast.error(`Email failed: ${emailRes.error ?? 'Unknown error'}`)
+      }
+
+      if (smsRes.success) {
+        setSmsResult('sent')
+        toast.success('Mobile SMS sent via SMSlenz!')
+      } else {
+        setSmsResult('failed')
+        toast.error(`SMS failed: ${smsRes.error ?? 'Unknown error'}`)
       }
     }
   }
@@ -154,6 +170,7 @@ export default function AddBuyerForm({ onSuccess, onNavigateToBuyers }: AddBuyer
     setSubmitted(false)
     setCreatedId(null)
     setEmailResult(null)
+    setSmsResult(null)
   }
 
   if (submitted) {
@@ -182,38 +199,73 @@ export default function AddBuyerForm({ onSuccess, onNavigateToBuyers }: AddBuyer
             <strong style={{ color: '#3d4466' }}>{formData.name}</strong> has been registered.
           </p>
 
-          {/* Email status */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '10px 18px',
-              borderRadius: 10,
-              marginBottom: 24,
-              fontSize: 13.5,
-              fontWeight: 600,
-              ...(emailResult === 'sending'
-                ? { background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }
-                : emailResult === 'sent'
-                ? { background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }
-                : emailResult === 'failed'
-                ? { background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }
-                : { background: '#f8f9fd', color: '#8892aa', border: '1px solid #eceef5' }),
-            }}
-          >
-            {emailResult === 'sending' && (
-              <><span className="spinner spinner-dark" style={{ width: 14, height: 14, borderWidth: 2 }} /> Sending invitation email…</>
-            )}
-            {emailResult === 'sent' && (
-              <><CheckCircle2 size={15} /> Invitation email sent to {formData.email}</>
-            )}
-            {emailResult === 'failed' && (
-              <><XCircle size={15} /> Email failed — you can resend from the Buyers list</>
-            )}
-            {!emailResult && (
-              <><Mail size={15} /> Email status unknown</>
-            )}
+          {/* Delivery badges */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', marginBottom: 24 }}>
+            {/* Email status */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 16px',
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                ...(emailResult === 'sending'
+                  ? { background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }
+                  : emailResult === 'sent'
+                  ? { background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }
+                  : emailResult === 'failed'
+                  ? { background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }
+                  : { background: '#f8f9fd', color: '#8892aa', border: '1px solid #eceef5' }),
+              }}
+            >
+              {emailResult === 'sending' && (
+                <><span className="spinner spinner-dark" style={{ width: 14, height: 14, borderWidth: 2 }} /> Sending invitation email…</>
+              )}
+              {emailResult === 'sent' && (
+                <><CheckCircle2 size={15} /> Invitation email delivered to {formData.email}</>
+              )}
+              {emailResult === 'failed' && (
+                <><XCircle size={15} /> Email failed — you can retry in All Buyers</>
+              )}
+              {!emailResult && (
+                <><Mail size={15} /> Email not sent</>
+              )}
+            </div>
+
+            {/* SMS status */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 16px',
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                ...(smsResult === 'sending'
+                  ? { background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }
+                  : smsResult === 'sent'
+                  ? { background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }
+                  : smsResult === 'failed'
+                  ? { background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }
+                  : { background: '#f8f9fd', color: '#8892aa', border: '1px solid #eceef5' }),
+              }}
+            >
+              {smsResult === 'sending' && (
+                <><span className="spinner spinner-dark" style={{ width: 14, height: 14, borderWidth: 2 }} /> Sending SMS via SMSlenz…</>
+              )}
+              {smsResult === 'sent' && (
+                <><CheckCircle2 size={15} /> Mobile SMS delivered to {formData.mobile}</>
+              )}
+              {smsResult === 'failed' && (
+                <><XCircle size={15} /> SMS delivery failed — you can retry in All Buyers</>
+              )}
+              {!smsResult && (
+                <><Smartphone size={15} /> SMS not sent</>
+              )}
+            </div>
           </div>
           {createdId && (
             <p style={{ fontSize: 12, color: '#b0b8d8', marginBottom: 28 }}>

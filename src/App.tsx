@@ -4,21 +4,31 @@ import Sidebar from './components/Sidebar'
 import Dashboard from './components/Dashboard'
 import AddBuyerForm from './components/AddBuyerForm'
 import BuyerList from './components/BuyerList'
+import PaymentsPage from './components/PaymentsPage'
 import SettingsPage from './components/SettingsPage'
+import LoginPage from './components/LoginPage'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import { Shield, LogOut } from 'lucide-react'
 import './index.css'
 
-type Page = 'dashboard' | 'buyers' | 'add-buyer' | 'settings'
+type Page = 'dashboard' | 'buyers' | 'payments' | 'add-buyer' | 'settings'
 
 const PAGE_TITLES: Record<Page, { title: string; subtitle: string }> = {
   dashboard: { title: 'Dashboard', subtitle: 'Overview of the CBA Forum ticket system' },
+  payments: { title: 'Payments & E-Tickets', subtitle: 'Verify PayHere transactions and issue digital tickets' },
   buyers: { title: 'All Buyers', subtitle: 'Manage and search buyer records' },
   'add-buyer': { title: 'Add Buyer', subtitle: 'Register a new buyer in the system' },
-  settings: { title: 'Settings', subtitle: 'Configure event details and email template' },
+  settings: { title: 'Settings', subtitle: 'Configure event details, email templates, and SMS settings' },
 }
 
-export default function App() {
+function MainLayout() {
+  const { currentAdmin, isSuperAdmin, logout } = useAuth()
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
   const [listRefresh, setListRefresh] = useState(0)
+
+  if (!currentAdmin) {
+    return <LoginPage />
+  }
 
   function navigate(page: Page) {
     setCurrentPage(page)
@@ -31,7 +41,101 @@ export default function App() {
   const { title, subtitle } = PAGE_TITLES[currentPage]
 
   return (
-    <>
+    <div className="admin-layout">
+      <Sidebar currentPage={currentPage} onNavigate={navigate} />
+
+      <div className="main-content">
+        {/* Top bar */}
+        <header className="topbar" style={{ padding: '0 28px' }}>
+          <div>
+            <div className="topbar-title">{title}</div>
+            <div className="topbar-subtitle">{subtitle}</div>
+          </div>
+
+          {/* Right Header: Role & User Info */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                background: isSuperAdmin ? 'rgba(147, 51, 234, 0.08)' : 'rgba(37, 99, 235, 0.08)',
+                border: isSuperAdmin ? '1px solid rgba(147, 51, 234, 0.25)' : '1px solid rgba(37, 99, 235, 0.25)',
+                padding: '6px 12px',
+                borderRadius: 20,
+              }}
+            >
+              <Shield size={14} color={isSuperAdmin ? '#9333ea' : '#2563eb'} />
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: isSuperAdmin ? '#7e22ce' : '#1d4ed8',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5,
+                }}
+              >
+                {isSuperAdmin ? 'Super Admin' : 'Admin'}
+              </span>
+              <span style={{ fontSize: 11, color: '#64748b' }}>
+                ({currentAdmin.name})
+              </span>
+            </div>
+
+            {/* Sign Out */}
+            <button
+              onClick={logout}
+              style={{
+                background: '#fee2e2',
+                border: '1px solid #fecaca',
+                borderRadius: 8,
+                padding: '6px 10px',
+                fontSize: 12,
+                fontWeight: 600,
+                color: '#dc2626',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+              title="Sign Out"
+            >
+              <LogOut size={13} />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="page-content">
+          {currentPage === 'dashboard' && <Dashboard />}
+
+          {currentPage === 'payments' && <PaymentsPage />}
+
+          {currentPage === 'buyers' && (
+            <BuyerList
+              onAddBuyer={() => navigate('add-buyer')}
+              refreshTrigger={listRefresh}
+            />
+          )}
+
+          {currentPage === 'add-buyer' && (
+            <AddBuyerForm
+              onSuccess={handleBuyerAdded}
+              onNavigateToBuyers={() => navigate('buyers')}
+            />
+          )}
+
+          {currentPage === 'settings' && <SettingsPage />}
+        </main>
+      </div>
+    </div>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
       <Toaster
         position="top-right"
         toastOptions={{
@@ -44,41 +148,7 @@ export default function App() {
           },
         }}
       />
-
-      <div className="admin-layout">
-        <Sidebar currentPage={currentPage} onNavigate={navigate} />
-
-        <div className="main-content">
-          {/* Top bar */}
-          <header className="topbar">
-            <div>
-              <div className="topbar-title">{title}</div>
-              <div className="topbar-subtitle">{subtitle}</div>
-            </div>
-          </header>
-
-          {/* Page content */}
-          <main className="page-content">
-            {currentPage === 'dashboard' && <Dashboard />}
-
-            {currentPage === 'buyers' && (
-              <BuyerList
-                onAddBuyer={() => navigate('add-buyer')}
-                refreshTrigger={listRefresh}
-              />
-            )}
-
-            {currentPage === 'add-buyer' && (
-              <AddBuyerForm
-                onSuccess={handleBuyerAdded}
-                onNavigateToBuyers={() => navigate('buyers')}
-              />
-            )}
-
-            {currentPage === 'settings' && <SettingsPage />}
-          </main>
-        </div>
-      </div>
-    </>
+      <MainLayout />
+    </AuthProvider>
   )
 }
