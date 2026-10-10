@@ -11,6 +11,25 @@ export async function sendBuyerTicketEmail(
   buyerId: string,
   buyerData?: Partial<Buyer>
 ): Promise<{ success: boolean; error?: string; ticket_number?: string }> {
+  let formattedBuyer = buyerData
+  if (formattedBuyer) {
+    const rawMeal = (formattedBuyer.meal_preference as string) || ''
+    formattedBuyer = {
+      ...formattedBuyer,
+      meal_preference: rawMeal === 'vegetarian' || rawMeal.toLowerCase().includes('veg') && !rawMeal.toLowerCase().includes('non')
+        ? 'Veg' as any
+        : 'Non-Veg' as any,
+    }
+  } else {
+    const { data: b } = await supabase.from('buyers').select('*').eq('id', buyerId).single()
+    if (b) {
+      formattedBuyer = {
+        ...b,
+        meal_preference: (b.meal_preference === 'vegetarian' ? 'Veg' : 'Non-Veg') as any,
+      }
+    }
+  }
+
   // Mark as sending in DB
   await supabase
     .from('buyers')
@@ -18,7 +37,7 @@ export async function sendBuyerTicketEmail(
     .eq('id', buyerId)
 
   const { data, error } = await supabase.functions.invoke('send-buyer-ticket', {
-    body: { buyer_id: buyerId, buyer: buyerData },
+    body: { buyer_id: buyerId, buyer: formattedBuyer },
   })
 
   if (error) {
