@@ -199,23 +199,27 @@ export default function CheckInPage() {
             )}
           </div>
 
-          <button
-            className="btn btn-sm btn-secondary"
-            onClick={() => setPollingActive((p) => !p)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            {pollingActive ? <WifiOff size={14} /> : <Wifi size={14} />}
-            {pollingActive ? 'Pause' : 'Resume'}
-          </button>
+          {!isViewer && (
+            <>
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={() => setPollingActive((p) => !p)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                {pollingActive ? <WifiOff size={14} /> : <Wifi size={14} />}
+                {pollingActive ? 'Pause' : 'Resume'}
+              </button>
 
-          <button
-            className="btn btn-sm btn-secondary"
-            onClick={fetchData}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            <RefreshCw size={14} />
-            Refresh Now
-          </button>
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={fetchData}
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <RefreshCw size={14} />
+                Refresh Now
+              </button>
+            </>
+          )}
         </div>
       </div>
 
