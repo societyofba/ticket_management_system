@@ -483,7 +483,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+      <div className="form-grid-2" style={{ marginBottom: 20 }}>
         {/* Event Details */}
         <div className="card">
           <div className="card-header">
@@ -778,7 +778,7 @@ export default function SettingsPage() {
           </span>
         </div>
         <div className="card-body">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+          <div className="form-grid-2" style={{ marginBottom: 20 }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Approved Sender ID (Mask Name)</label>
               <input

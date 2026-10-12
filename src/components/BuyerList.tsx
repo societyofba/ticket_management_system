@@ -275,7 +275,7 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
             )}
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="table-scroll-wrapper">
             <table className="data-table">
               <thead>
                 <tr>

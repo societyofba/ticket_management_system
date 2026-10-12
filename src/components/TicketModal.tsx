@@ -98,6 +98,7 @@ export default function TicketModal({ buyer, eventSettings, onClose, onTicketSen
       >
         {/* Header Action Bar */}
         <div
+          className="ticket-modal-header"
           style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -158,7 +159,7 @@ export default function TicketModal({ buyer, eventSettings, onClose, onTicketSen
         </div>
 
         {/* Printable Ticket Pass */}
-        <div ref={ticketRef} style={{ padding: 24 }}>
+        <div ref={ticketRef} className="ticket-pass-container" style={{ padding: 24 }}>
           <div
             style={{
               background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)',
@@ -211,6 +212,7 @@ export default function TicketModal({ buyer, eventSettings, onClose, onTicketSen
           >
             {/* Top Bar with Ticket # and Status */}
             <div
+              className="ticket-meta-bar"
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -253,7 +255,7 @@ export default function TicketModal({ buyer, eventSettings, onClose, onTicketSen
             </div>
 
             {/* Middle Section: Attendee details + QR Code side-by-side */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 18, alignItems: 'center' }}>
+            <div className="ticket-details-grid">
               {/* Attendee Details */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div>

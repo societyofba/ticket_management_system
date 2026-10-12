@@ -9,7 +9,7 @@ import SettingsPage from './components/SettingsPage'
 import CheckInPage from './components/CheckInPage'
 import LoginPage from './components/LoginPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import { Shield, LogOut, Eye } from 'lucide-react'
+import { Shield, LogOut, Eye, Menu, X, LayoutDashboard, Users, CreditCard, ScanLine, Settings, UserPlus } from 'lucide-react'
 import './index.css'
 
 type Page = 'dashboard' | 'buyers' | 'payments' | 'add-buyer' | 'settings' | 'checkin'
@@ -20,13 +20,14 @@ const PAGE_TITLES: Record<Page, { title: string; subtitle: string }> = {
   buyers: { title: 'All Buyers', subtitle: 'Manage and search buyer records' },
   'add-buyer': { title: 'Add Buyer', subtitle: 'Register a new buyer in the system' },
   settings: { title: 'Settings', subtitle: 'Configure event details, email templates, and SMS settings' },
-  checkin: { title: '📡 Check-In Dashboard', subtitle: 'Real-time event day arrival tracking — updates every 5 seconds' },
+  checkin: { title: '📡 Check-In', subtitle: 'Real-time event day arrival tracking' },
 }
 
 function MainLayout() {
   const { currentAdmin, isSuperAdmin, isViewer, logout } = useAuth()
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
   const [listRefresh, setListRefresh] = useState(0)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   if (!currentAdmin) {
     return <LoginPage />
@@ -34,6 +35,7 @@ function MainLayout() {
 
   function navigate(page: Page) {
     setCurrentPage(page)
+    setSidebarOpen(false) // close sidebar after navigation on mobile
   }
 
   function handleBuyerAdded() {
@@ -44,23 +46,38 @@ function MainLayout() {
 
   return (
     <div className="admin-layout">
-      <Sidebar currentPage={currentPage} onNavigate={navigate} />
+      {/* Mobile sidebar overlay backdrop */}
+      <div
+        className={`sidebar-overlay ${sidebarOpen ? 'visible' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+
+      <Sidebar currentPage={currentPage} onNavigate={navigate} mobileOpen={sidebarOpen} />
 
       <div className="main-content">
         {/* Top bar */}
         <header className="topbar" style={{ padding: '0 28px' }}>
+          {/* Hamburger - only visible on mobile */}
+          <button
+            className="mobile-menu-btn"
+            onClick={() => setSidebarOpen((o) => !o)}
+            aria-label="Toggle menu"
+          >
+            {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+
           <div>
             <div className="topbar-title">{title}</div>
             <div className="topbar-subtitle">{subtitle}</div>
           </div>
 
           {/* Right Header: Role & User Info */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
+                gap: 6,
                 background: isViewer
                   ? 'rgba(217, 119, 6, 0.08)'
                   : isSuperAdmin
@@ -71,28 +88,26 @@ function MainLayout() {
                   : isSuperAdmin
                   ? '1px solid rgba(147, 51, 234, 0.25)'
                   : '1px solid rgba(37, 99, 235, 0.25)',
-                padding: '6px 12px',
+                padding: '5px 10px',
                 borderRadius: 20,
               }}
             >
               {isViewer ? (
-                <Eye size={14} color="#d97706" />
+                <Eye size={13} color="#d97706" />
               ) : (
-                <Shield size={14} color={isSuperAdmin ? '#9333ea' : '#2563eb'} />
+                <Shield size={13} color={isSuperAdmin ? '#9333ea' : '#2563eb'} />
               )}
               <span
+                className="topbar-role-label"
                 style={{
-                  fontSize: 12,
+                  fontSize: 11.5,
                   fontWeight: 700,
                   color: isViewer ? '#b45309' : isSuperAdmin ? '#7e22ce' : '#1d4ed8',
                   textTransform: 'uppercase',
                   letterSpacing: 0.5,
                 }}
               >
-                {isViewer ? 'View Only (Observer)' : isSuperAdmin ? 'Super Admin' : 'Admin'}
-              </span>
-              <span style={{ fontSize: 11, color: '#64748b' }}>
-                ({currentAdmin.name})
+                {isViewer ? 'Observer' : isSuperAdmin ? 'Super Admin' : 'Admin'}
               </span>
             </div>
 
@@ -115,7 +130,7 @@ function MainLayout() {
               title="Sign Out"
             >
               <LogOut size={13} />
-              <span>Sign Out</span>
+              <span className="topbar-role-label">Sign Out</span>
             </button>
           </div>
         </header>
@@ -144,6 +159,56 @@ function MainLayout() {
 
           {currentPage === 'checkin' && <CheckInPage />}
         </main>
+
+        {/* Mobile bottom navigation bar */}
+        <nav className="mobile-bottom-nav">
+          <div className="mobile-bottom-nav-inner">
+            <button
+              className={`mobile-nav-item ${currentPage === 'dashboard' ? 'active' : ''}`}
+              onClick={() => navigate('dashboard')}
+            >
+              <LayoutDashboard size={20} />
+              Home
+            </button>
+            <button
+              className={`mobile-nav-item ${currentPage === 'buyers' ? 'active' : ''}`}
+              onClick={() => navigate('buyers')}
+            >
+              <Users size={20} />
+              Buyers
+            </button>
+            <button
+              className={`mobile-nav-item ${currentPage === 'payments' ? 'active' : ''}`}
+              onClick={() => navigate('payments')}
+            >
+              <CreditCard size={20} />
+              Payments
+            </button>
+            <button
+              className={`mobile-nav-item ${currentPage === 'checkin' ? 'active' : ''}`}
+              onClick={() => navigate('checkin')}
+            >
+              <ScanLine size={20} />
+              Check-In
+            </button>
+            {!isViewer && (
+              <button
+                className={`mobile-nav-item ${currentPage === 'add-buyer' ? 'active' : ''}`}
+                onClick={() => navigate('add-buyer')}
+              >
+                <UserPlus size={20} />
+                Add
+              </button>
+            )}
+            <button
+              className={`mobile-nav-item ${currentPage === 'settings' ? 'active' : ''}`}
+              onClick={() => navigate('settings')}
+            >
+              <Settings size={20} />
+              Settings
+            </button>
+          </div>
+        </nav>
       </div>
     </div>
   )

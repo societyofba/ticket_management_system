@@ -171,7 +171,7 @@ export default function CheckInPage() {
           <h1>Event Day Check-In</h1>
           <p>Real-time arrival tracking for CBA Forum 2026</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {/* Live polling indicator */}
           <div
             style={{
@@ -224,7 +224,7 @@ export default function CheckInPage() {
       </div>
 
       {/* ── Dashboard Stats ──────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
+      <div className="stat-grid-3">
         <div className="card" style={{ padding: '20px 24px', textAlign: 'center', borderTop: '4px solid #3b82f6' }}>
           <div style={{ fontSize: 32, fontWeight: 800, color: '#1e3a8a' }}>{stats.totalPaid}</div>
           <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 4 }}>
@@ -278,8 +278,8 @@ export default function CheckInPage() {
 
       {/* ── Live Arrivals Feed + Not Arrived Tab ─────────────── */}
       <div className="card">
-        <div className="card-header" style={{ borderBottom: '1px solid #e8eaf2' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div className="card-header" style={{ borderBottom: '1px solid #e8eaf2', flexWrap: 'wrap', gap: 12, padding: '14px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             {/* Tabs */}
             <button
               onClick={() => setActiveTab('checked_in')}
@@ -322,7 +322,7 @@ export default function CheckInPage() {
           </div>
 
           {/* Search */}
-          <div style={{ position: 'relative', flex: 1, maxWidth: 280 }}>
+          <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 180, maxWidth: 320 }}>
             <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input
               className="form-control"
@@ -334,7 +334,7 @@ export default function CheckInPage() {
           </div>
 
           {lastUpdated && (
-            <div style={{ fontSize: 11, color: '#94a3b8', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 11, color: '#94a3b8', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
               <BarChart3 size={11} style={{ display: 'inline', marginRight: 4 }} />
               Updated {formatTime(lastUpdated.toISOString())}
             </div>
@@ -352,6 +352,7 @@ export default function CheckInPage() {
                   </p>
                 </div>
               ) : (
+                <div className="table-scroll-wrapper">
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e8eaf2' }}>
@@ -428,6 +429,7 @@ export default function CheckInPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </>
           )}
@@ -442,6 +444,7 @@ export default function CheckInPage() {
                   </p>
                 </div>
               ) : (
+                <div className="table-scroll-wrapper">
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e8eaf2' }}>
@@ -512,6 +515,7 @@ export default function CheckInPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </>
           )}

@@ -126,7 +126,7 @@ export default function PaymentsPage() {
           <h1>Payments & E-Tickets</h1>
           <p>Verify PayHere transactions, confirm payments, and issue digital passes</p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <a
             href="https://www.payhere.lk/account"
             target="_blank"
@@ -207,7 +207,7 @@ export default function PaymentsPage() {
         {/* Filter and Search Bar */}
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #eceef5', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           {/* Tabs */}
-          <div style={{ display: 'flex', background: '#f1f5f9', padding: 4, borderRadius: 8, gap: 4 }}>
+          <div className="filter-tabs-scroll" style={{ background: '#f1f5f9', padding: 4, borderRadius: 8, gap: 4 }}>
             <button
               onClick={() => setFilterTab('all')}
               style={{
@@ -283,7 +283,7 @@ export default function PaymentsPage() {
             <p>Try switching filter tabs or clearing your search keywords.</p>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="table-scroll-wrapper">
             <table className="data-table">
               <thead>
                 <tr>

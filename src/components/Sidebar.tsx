@@ -4,13 +4,14 @@ import { useAuth } from '../context/AuthContext'
 interface SidebarProps {
   currentPage: 'dashboard' | 'buyers' | 'payments' | 'add-buyer' | 'settings' | 'checkin'
   onNavigate: (page: 'dashboard' | 'buyers' | 'payments' | 'add-buyer' | 'settings' | 'checkin') => void
+  mobileOpen?: boolean
 }
 
-export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+export default function Sidebar({ currentPage, onNavigate, mobileOpen = false }: SidebarProps) {
   const { currentAdmin, isSuperAdmin, isViewer, logout } = useAuth()
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${mobileOpen ? ' mobile-open' : ''}`}>
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="logo-badge">
