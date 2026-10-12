@@ -479,6 +479,60 @@ export default function SettingsPage() {
                 </button>
               )}
             </div>
+
+            {/* Viewer (Observer) Tile */}
+            <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: 12, padding: '18px 20px', boxShadow: '0 2px 6px rgba(0,0,0,0.03)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>Viewer (Observer)</div>
+                  <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>viewer@cbaforum.lk</div>
+                </div>
+                <span style={{ fontSize: 10.5, fontWeight: 700, background: 'rgba(217, 119, 6, 0.1)', color: '#b45309', padding: '3px 8px', borderRadius: 6, border: '1px solid rgba(217, 119, 6, 0.25)', textTransform: 'uppercase' }}>
+                  👁️ Read-Only
+                </span>
+              </div>
+              <p style={{ fontSize: 12, color: '#475569', lineHeight: 1.5, margin: '0 0 14px' }}>
+                <strong>Permissions:</strong> View-only access to dashboard metrics, attendees, payments, and check-in feed. <span style={{ color: '#dc2626' }}>Cannot perform any actions or dispatch emails.</span>
+              </p>
+              
+              {editingAdminId === (adminsList.find((a) => a.role === 'viewer')?.id || 'viewer-admin-default-id') ? (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="password"
+                    placeholder="New password"
+                    className="form-control"
+                    style={{ fontSize: 12, padding: '6px 10px' }}
+                    value={newPasswordValue}
+                    onChange={(e) => setNewPasswordValue(e.target.value)}
+                  />
+                  <button
+                    className="btn btn-sm btn-primary"
+                    disabled={updatingPassword}
+                    onClick={() => handleSaveAdminPassword(adminsList.find((a) => a.role === 'viewer')?.id || 'viewer-admin-default-id')}
+                  >
+                    Save
+                  </button>
+                  <button
+                    className="btn btn-sm btn-secondary"
+                    onClick={() => { setEditingAdminId(null); setNewPasswordValue('') }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  className="btn btn-sm btn-secondary"
+                  style={{ fontSize: 12, padding: '5px 10px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  onClick={() => {
+                    setEditingAdminId(adminsList.find((a) => a.role === 'viewer')?.id || 'viewer-admin-default-id')
+                    setNewPasswordValue('')
+                  }}
+                >
+                  <KeyRound size={13} />
+                  <span>Change Password</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -132,11 +132,32 @@ export async function updateAdminPassword(
   newPassword: string
 ): Promise<{ error: string | null }> {
   try {
-    const { error } = await supabase
-      .from('admins')
-      .update({ password: newPassword.trim(), updated_at: new Date().toISOString() })
-      .eq('id', adminId)
+    const cleanPass = newPassword.trim()
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(adminId)
 
+    // Update in-memory fallback if matched
+    const fallback = FALLBACK_ADMINS.find(
+      (a) => a.id === adminId || a.email.toLowerCase() === adminId.toLowerCase()
+    )
+    if (fallback) {
+      fallback.password = cleanPass
+    }
+
+    let query = supabase
+      .from('admins')
+      .update({ password: cleanPass, updated_at: new Date().toISOString() })
+
+    if (isUuid) {
+      query = query.eq('id', adminId)
+    } else if (adminId.includes('@')) {
+      query = query.eq('email', adminId.toLowerCase().trim())
+    } else if (fallback) {
+      query = query.eq('email', fallback.email)
+    } else {
+      query = query.eq('id', adminId)
+    }
+
+    const { error } = await query
     if (error) return { error: error.message }
     return { error: null }
   } catch (err: unknown) {
