@@ -22,6 +22,7 @@ import {
   CircleDot,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useAuth } from '../context/AuthContext'
 
 const POLL_INTERVAL_MS = 5000
 
@@ -41,6 +42,7 @@ function timeSince(iso: string | null): string {
 }
 
 export default function CheckInPage() {
+  const { isViewer } = useAuth()
   const [checkedInBuyers, setCheckedInBuyers] = useState<Buyer[]>([])
   const [allPaidBuyers, setAllPaidBuyers] = useState<Buyer[]>([])
   const [stats, setStats] = useState({ totalPaid: 0, checkedIn: 0, notYetArrived: 0 })
@@ -102,6 +104,10 @@ export default function CheckInPage() {
   }, [pollingActive, fetchData])
 
   async function handleUndoCheckIn(buyer: Buyer) {
+    if (isViewer) {
+      toast.error('View-only profile cannot modify check-in records.')
+      return
+    }
     if (!confirm(`Remove check-in for "${buyer.name}"?`)) return
     setUndoingId(buyer.id)
     const { error } = await undoCheckIn(buyer.id)
@@ -115,6 +121,10 @@ export default function CheckInPage() {
   }
 
   async function handleManualCheckIn(buyer: Buyer) {
+    if (isViewer) {
+      toast.error('View-only profile cannot perform check-ins.')
+      return
+    }
     setCheckingInId(buyer.id)
     const { error } = await manualCheckIn(buyer.id)
     setCheckingInId(null)
@@ -345,7 +355,7 @@ export default function CheckInPage() {
                       <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.6 }}>Ticket #</th>
                       <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.6 }}>Arrived At</th>
                       <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.6 }}>Meal</th>
-                      <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.6 }}>Actions</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.6 }}>{isViewer ? 'Status' : 'Actions'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -387,22 +397,28 @@ export default function CheckInPage() {
                           </span>
                         </td>
                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          <button
-                            className="btn btn-sm btn-secondary"
-                            style={{ fontSize: 11, padding: '4px 10px', color: '#dc2626' }}
-                            onClick={() => handleUndoCheckIn(buyer)}
-                            disabled={undoingId === buyer.id}
-                            title="Remove check-in (undo)"
-                          >
-                            {undoingId === buyer.id ? (
-                              <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
-                            ) : (
-                              <>
-                                <RotateCcw size={12} style={{ marginRight: 4 }} />
-                                Undo
-                              </>
-                            )}
-                          </button>
+                          {isViewer ? (
+                            <span style={{ fontSize: 11.5, color: '#16a34a', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <UserCheck size={13} /> Present
+                            </span>
+                          ) : (
+                            <button
+                              className="btn btn-sm btn-secondary"
+                              style={{ fontSize: 11, padding: '4px 10px', color: '#dc2626' }}
+                              onClick={() => handleUndoCheckIn(buyer)}
+                              disabled={undoingId === buyer.id}
+                              title="Remove check-in (undo)"
+                            >
+                              {undoingId === buyer.id ? (
+                                <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                              ) : (
+                                <>
+                                  <RotateCcw size={12} style={{ marginRight: 4 }} />
+                                  Undo
+                                </>
+                              )}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -429,7 +445,7 @@ export default function CheckInPage() {
                       <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.6 }}>Ticket #</th>
                       <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.6 }}>Contact</th>
                       <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.6 }}>Meal</th>
-                      <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.6 }}>Manual Check-In</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.6 }}>{isViewer ? 'Status' : 'Manual Check-In'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -467,22 +483,26 @@ export default function CheckInPage() {
                           </span>
                         </td>
                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          <button
-                            className="btn btn-sm btn-primary"
-                            style={{ fontSize: 11, padding: '5px 12px' }}
-                            onClick={() => handleManualCheckIn(buyer)}
-                            disabled={checkingInId === buyer.id}
-                            title="Mark as arrived manually"
-                          >
-                            {checkingInId === buyer.id ? (
-                              <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
-                            ) : (
-                              <>
-                                <CheckSquare size={12} style={{ marginRight: 4 }} />
-                                Mark Arrived
-                              </>
-                            )}
-                          </button>
+                          {isViewer ? (
+                            <span style={{ fontSize: 11.5, color: '#94a3b8', fontStyle: 'italic' }}>Pending Arrival</span>
+                          ) : (
+                            <button
+                              className="btn btn-sm btn-primary"
+                              style={{ fontSize: 11, padding: '5px 12px' }}
+                              onClick={() => handleManualCheckIn(buyer)}
+                              disabled={checkingInId === buyer.id}
+                              title="Mark as arrived manually"
+                            >
+                              {checkingInId === buyer.id ? (
+                                <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                              ) : (
+                                <>
+                                  <CheckSquare size={12} style={{ marginRight: 4 }} />
+                                  Mark Arrived
+                                </>
+                              )}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

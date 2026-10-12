@@ -18,8 +18,10 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import TicketModal from './TicketModal'
+import { useAuth } from '../context/AuthContext'
 
 export default function PaymentsPage() {
+  const { isViewer } = useAuth()
   const [buyers, setBuyers] = useState<Buyer[]>([])
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
@@ -75,6 +77,10 @@ export default function PaymentsPage() {
 
   async function handleConfirmPaymentSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (isViewer) {
+      toast.error('View-only profile cannot confirm payments.')
+      return
+    }
     if (!confirmingBuyer) return
 
     setConfirmingLoading(true)
@@ -96,6 +102,10 @@ export default function PaymentsPage() {
   }
 
   async function handleResendTicketEmail(buyer: Buyer) {
+    if (isViewer) {
+      toast.error('View-only profile cannot dispatch ticket emails.')
+      return
+    }
     setSendingTicketId(buyer.id)
     const { success, error } = await sendBuyerTicketEmail(buyer.id, buyer)
     setSendingTicketId(null)
@@ -376,16 +386,20 @@ export default function PaymentsPage() {
                       <td>
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                           {!isPaid ? (
-                            <button
-                              className="btn btn-sm btn-primary"
-                              onClick={() => {
-                                setConfirmingBuyer(buyer)
-                                setPayhereRefInput('')
-                              }}
-                              style={{ padding: '4px 10px', fontSize: 11.5, fontWeight: 700 }}
-                            >
-                              Confirm Paid
-                            </button>
+                            isViewer ? (
+                              <span style={{ fontSize: 11.5, color: '#94a3b8', fontStyle: 'italic' }}>Pending</span>
+                            ) : (
+                              <button
+                                className="btn btn-sm btn-primary"
+                                onClick={() => {
+                                  setConfirmingBuyer(buyer)
+                                  setPayhereRefInput('')
+                                }}
+                                style={{ padding: '4px 10px', fontSize: 11.5, fontWeight: 700 }}
+                              >
+                                Confirm Paid
+                              </button>
+                            )
                           ) : (
                             <>
                               <button
@@ -396,19 +410,21 @@ export default function PaymentsPage() {
                               >
                                 <QrCode size={13} /> Ticket
                               </button>
-                              <button
-                                className="btn btn-sm btn-secondary"
-                                onClick={() => handleResendTicketEmail(buyer)}
-                                disabled={sendingTicketId === buyer.id}
-                                style={{ padding: '4px 8px', fontSize: 11.5 }}
-                                title="Resend ticket email"
-                              >
-                                {sendingTicketId === buyer.id ? (
-                                  <span className="spinner" style={{ width: 10, height: 10, borderWidth: 1.5 }} />
-                                ) : (
-                                  <SendHorizonal size={12} />
-                                )}
-                              </button>
+                              {!isViewer && (
+                                <button
+                                  className="btn btn-sm btn-secondary"
+                                  onClick={() => handleResendTicketEmail(buyer)}
+                                  disabled={sendingTicketId === buyer.id}
+                                  style={{ padding: '4px 8px', fontSize: 11.5 }}
+                                  title="Resend ticket email"
+                                >
+                                  {sendingTicketId === buyer.id ? (
+                                    <span className="spinner" style={{ width: 10, height: 10, borderWidth: 1.5 }} />
+                                  ) : (
+                                    <SendHorizonal size={12} />
+                                  )}
+                                </button>
+                              )}
                             </>
                           )}
                         </div>

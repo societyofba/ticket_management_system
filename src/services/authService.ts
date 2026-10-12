@@ -15,6 +15,13 @@ export const FALLBACK_ADMINS: AdminUser[] = [
     role: 'admin',
     password: 'admin123',
   },
+  {
+    id: 'viewer-admin-default-id',
+    name: 'Viewer (Observer)',
+    email: 'viewer@cbaforum.lk',
+    role: 'viewer',
+    password: 'viewer123',
+  },
 ]
 
 export async function loginAdmin(

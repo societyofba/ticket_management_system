@@ -1,4 +1,4 @@
-import { Users, LayoutDashboard, UserPlus, Settings, CreditCard, Lock, LogOut, Shield, ScanLine } from 'lucide-react'
+import { Users, LayoutDashboard, UserPlus, Settings, CreditCard, Lock, LogOut, Shield, ScanLine, Eye } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 interface SidebarProps {
@@ -7,7 +7,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
-  const { currentAdmin, isSuperAdmin, logout } = useAuth()
+  const { currentAdmin, isSuperAdmin, isViewer, logout } = useAuth()
 
   return (
     <aside className="sidebar">
@@ -78,13 +78,42 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           All Buyers
         </button>
 
-        <button
-          className={`nav-link ${currentPage === 'add-buyer' ? 'active' : ''}`}
-          onClick={() => onNavigate('add-buyer')}
-        >
-          <UserPlus className="nav-icon" />
-          Add Buyer
-        </button>
+        {!isViewer ? (
+          <button
+            className={`nav-link ${currentPage === 'add-buyer' ? 'active' : ''}`}
+            onClick={() => onNavigate('add-buyer')}
+          >
+            <UserPlus className="nav-icon" />
+            Add Buyer
+          </button>
+        ) : (
+          <button
+            className="nav-link"
+            style={{ opacity: 0.55, cursor: 'not-allowed', display: 'flex', justifyContent: 'space-between' }}
+            onClick={() => {}}
+            title="Viewer account (Read-Only) cannot add buyers"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <UserPlus className="nav-icon" />
+              <span>Add Buyer</span>
+            </div>
+            <span
+              style={{
+                fontSize: 10,
+                background: 'rgba(239, 68, 68, 0.2)',
+                color: '#f87171',
+                padding: '2px 6px',
+                borderRadius: 4,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3,
+                fontWeight: 600,
+              }}
+            >
+              <Lock size={10} /> Locked
+            </span>
+          </button>
+        )}
 
         <div className="nav-section-label" style={{ marginTop: 20 }}>System</div>
 
@@ -135,6 +164,8 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                 borderRadius: 8,
                 background: isSuperAdmin
                   ? 'linear-gradient(135deg, #8b5cf6, #d946ef)'
+                  : isViewer
+                  ? 'linear-gradient(135deg, #64748b, #475569)'
                   : 'linear-gradient(135deg, #3b82f6, #06b6d4)',
                 display: 'flex',
                 alignItems: 'center',
@@ -144,10 +175,12 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                 fontSize: 13,
                 boxShadow: isSuperAdmin
                   ? '0 2px 8px rgba(139, 92, 246, 0.4)'
+                  : isViewer
+                  ? '0 2px 8px rgba(100, 116, 139, 0.3)'
                   : '0 2px 8px rgba(59, 130, 246, 0.4)',
               }}
             >
-              {currentAdmin?.name?.charAt(0) || 'A'}
+              {currentAdmin?.name?.charAt(0) || (isViewer ? 'V' : 'A')}
             </div>
             <div>
               <div
@@ -162,7 +195,7 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                   textOverflow: 'ellipsis',
                 }}
               >
-                {currentAdmin?.name || 'Admin'}
+                {currentAdmin?.name || (isViewer ? 'Viewer' : 'Admin')}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
                 <span
@@ -171,9 +204,17 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                     fontWeight: 700,
                     padding: '1px 6px',
                     borderRadius: 4,
-                    background: isSuperAdmin ? 'rgba(168, 85, 247, 0.25)' : 'rgba(59, 130, 246, 0.25)',
-                    color: isSuperAdmin ? '#c084fc' : '#93c5fd',
-                    border: isSuperAdmin ? '1px solid rgba(192, 132, 252, 0.3)' : '1px solid rgba(147, 197, 253, 0.3)',
+                    background: isSuperAdmin
+                      ? 'rgba(168, 85, 247, 0.25)'
+                      : isViewer
+                      ? 'rgba(245, 158, 11, 0.25)'
+                      : 'rgba(59, 130, 246, 0.25)',
+                    color: isSuperAdmin ? '#c084fc' : isViewer ? '#fbbf24' : '#93c5fd',
+                    border: isSuperAdmin
+                      ? '1px solid rgba(192, 132, 252, 0.3)'
+                      : isViewer
+                      ? '1px solid rgba(251, 191, 36, 0.3)'
+                      : '1px solid rgba(147, 197, 253, 0.3)',
                     textTransform: 'uppercase',
                     letterSpacing: 0.5,
                     display: 'inline-flex',
@@ -181,8 +222,8 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                     gap: 3,
                   }}
                 >
-                  <Shield size={9} />
-                  {isSuperAdmin ? 'Super Admin' : 'Admin'}
+                  {isViewer ? <Eye size={9} /> : <Shield size={9} />}
+                  {isSuperAdmin ? 'Super Admin' : isViewer ? 'View Only' : 'Admin'}
                 </span>
               </div>
             </div>

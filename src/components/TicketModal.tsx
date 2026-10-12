@@ -4,6 +4,7 @@ import { type Buyer } from '../lib/supabase'
 import { X, Printer, SendHorizonal, CheckCircle2, QrCode, MapPin, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { sendBuyerTicketEmail } from '../services/ticketService'
+import { useAuth } from '../context/AuthContext'
 
 interface TicketModalProps {
   buyer: Buyer | null
@@ -13,6 +14,7 @@ interface TicketModalProps {
 }
 
 export default function TicketModal({ buyer, eventSettings, onClose, onTicketSent }: TicketModalProps) {
+  const { isViewer } = useAuth()
   const [qrDataUrl, setQrDataUrl] = useState<string>('')
   const [resending, setResending] = useState(false)
   const ticketRef = useRef<HTMLDivElement>(null)
@@ -45,6 +47,10 @@ export default function TicketModal({ buyer, eventSettings, onClose, onTicketSen
     : '🍽️ Other'
 
   async function handleResendEmail() {
+    if (isViewer) {
+      toast.error('View-only profile cannot dispatch ticket emails.')
+      return
+    }
     if (!buyer) return
     setResending(true)
     const { success, error } = await sendBuyerTicketEmail(buyer.id, buyer)
@@ -116,20 +122,22 @@ export default function TicketModal({ buyer, eventSettings, onClose, onTicketSen
             >
               <Printer size={13} /> Print
             </button>
-            <button
-              className="btn btn-sm btn-primary"
-              onClick={handleResendEmail}
-              disabled={resending}
-              style={{ padding: '6px 12px', fontSize: 12 }}
-              title="Send/Resend ticket to buyer email"
-            >
-              {resending ? (
-                <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
-              ) : (
-                <SendHorizonal size={13} />
-              )}
-              {resending ? 'Sending…' : 'Email Ticket'}
-            </button>
+            {!isViewer && (
+              <button
+                className="btn btn-sm btn-primary"
+                onClick={handleResendEmail}
+                disabled={resending}
+                style={{ padding: '6px 12px', fontSize: 12 }}
+                title="Send/Resend ticket to buyer email"
+              >
+                {resending ? (
+                  <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                ) : (
+                  <SendHorizonal size={13} />
+                )}
+                {resending ? 'Sending…' : 'Email Ticket'}
+              </button>
+            )}
             <button
               onClick={onClose}
               style={{

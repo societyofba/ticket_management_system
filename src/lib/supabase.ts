@@ -53,7 +53,7 @@ export interface Buyer {
   updated_at: string
 }
 
-export type AdminRole = 'super_admin' | 'admin'
+export type AdminRole = 'super_admin' | 'admin' | 'viewer'
 
 export interface AdminUser {
   id: string

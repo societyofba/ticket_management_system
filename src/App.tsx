@@ -9,7 +9,7 @@ import SettingsPage from './components/SettingsPage'
 import CheckInPage from './components/CheckInPage'
 import LoginPage from './components/LoginPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import { Shield, LogOut } from 'lucide-react'
+import { Shield, LogOut, Eye } from 'lucide-react'
 import './index.css'
 
 type Page = 'dashboard' | 'buyers' | 'payments' | 'add-buyer' | 'settings' | 'checkin'
@@ -24,7 +24,7 @@ const PAGE_TITLES: Record<Page, { title: string; subtitle: string }> = {
 }
 
 function MainLayout() {
-  const { currentAdmin, isSuperAdmin, logout } = useAuth()
+  const { currentAdmin, isSuperAdmin, isViewer, logout } = useAuth()
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
   const [listRefresh, setListRefresh] = useState(0)
 
@@ -61,23 +61,35 @@ function MainLayout() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
-                background: isSuperAdmin ? 'rgba(147, 51, 234, 0.08)' : 'rgba(37, 99, 235, 0.08)',
-                border: isSuperAdmin ? '1px solid rgba(147, 51, 234, 0.25)' : '1px solid rgba(37, 99, 235, 0.25)',
+                background: isViewer
+                  ? 'rgba(217, 119, 6, 0.08)'
+                  : isSuperAdmin
+                  ? 'rgba(147, 51, 234, 0.08)'
+                  : 'rgba(37, 99, 235, 0.08)',
+                border: isViewer
+                  ? '1px solid rgba(217, 119, 6, 0.25)'
+                  : isSuperAdmin
+                  ? '1px solid rgba(147, 51, 234, 0.25)'
+                  : '1px solid rgba(37, 99, 235, 0.25)',
                 padding: '6px 12px',
                 borderRadius: 20,
               }}
             >
-              <Shield size={14} color={isSuperAdmin ? '#9333ea' : '#2563eb'} />
+              {isViewer ? (
+                <Eye size={14} color="#d97706" />
+              ) : (
+                <Shield size={14} color={isSuperAdmin ? '#9333ea' : '#2563eb'} />
+              )}
               <span
                 style={{
                   fontSize: 12,
                   fontWeight: 700,
-                  color: isSuperAdmin ? '#7e22ce' : '#1d4ed8',
+                  color: isViewer ? '#b45309' : isSuperAdmin ? '#7e22ce' : '#1d4ed8',
                   textTransform: 'uppercase',
                   letterSpacing: 0.5,
                 }}
               >
-                {isSuperAdmin ? 'Super Admin' : 'Admin'}
+                {isViewer ? 'View Only (Observer)' : isSuperAdmin ? 'Super Admin' : 'Admin'}
               </span>
               <span style={{ fontSize: 11, color: '#64748b' }}>
                 ({currentAdmin.name})

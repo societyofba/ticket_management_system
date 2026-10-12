@@ -135,7 +135,7 @@ const TICKET_PLACEHOLDERS = [
 ]
 
 export default function SettingsPage() {
-  const { isSuperAdmin, currentAdmin, logout } = useAuth()
+  const { isSuperAdmin, isViewer, currentAdmin, logout } = useAuth()
   const [settings, setSettings] = useState<Record<string, string>>(DEFAULT_SETTINGS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -276,7 +276,7 @@ export default function SettingsPage() {
             Access Restricted &bull; Super Admin Only
           </h2>
           <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6, maxWidth: 480, margin: '0 auto 24px' }}>
-            You are logged in as <strong>{currentAdmin?.name || 'Event Admin'}</strong> with the <strong>Admin</strong> role.
+            You are logged in as <strong>{currentAdmin?.name || 'Event Admin'}</strong> with the <strong>{isViewer ? 'View Only' : 'Admin'}</strong> role.
             Per system security policy, settings, email/SMS templates, and ticket design can only be modified by the <strong>Super Admin</strong>.
           </p>
 

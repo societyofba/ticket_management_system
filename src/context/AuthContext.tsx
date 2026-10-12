@@ -7,8 +7,13 @@ interface AuthContextType {
   currentAdmin: AdminUser | null
   role: AdminRole | null
   isSuperAdmin: boolean
+  isViewer: boolean
   canDeleteBuyers: boolean
   canChangeSettings: boolean
+  canAddBuyers: boolean
+  canSendEmails: boolean
+  canManagePayments: boolean
+  canCheckIn: boolean
   login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
 }
@@ -40,8 +45,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const role = currentAdmin?.role ?? null
   const isSuperAdmin = role === 'super_admin'
+  const isViewer = role === 'viewer'
   const canDeleteBuyers = isSuperAdmin
   const canChangeSettings = isSuperAdmin
+  const canAddBuyers = !isViewer
+  const canSendEmails = !isViewer
+  const canManagePayments = !isViewer
+  const canCheckIn = !isViewer
 
   async function login(email: string, pass: string): Promise<{ success: boolean; error?: string }> {
     const { user, error } = await loginAdmin(email, pass)
@@ -49,7 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: error || 'Login failed' }
     }
     setCurrentAdmin(user)
-    toast.success(`Welcome, ${user.name}! (${user.role === 'super_admin' ? 'Super Admin' : 'Admin'})`)
+    const roleLabel =
+      user.role === 'super_admin'
+        ? 'Super Admin'
+        : user.role === 'viewer'
+        ? 'Viewer (Read-Only Mode)'
+        : 'Event Admin'
+    toast.success(`Welcome, ${user.name}! (${roleLabel})`)
     return { success: true }
   }
 
@@ -64,8 +80,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         currentAdmin,
         role,
         isSuperAdmin,
+        isViewer,
         canDeleteBuyers,
         canChangeSettings,
+        canAddBuyers,
+        canSendEmails,
+        canManagePayments,
+        canCheckIn,
         login,
         logout,
       }}

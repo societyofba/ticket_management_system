@@ -3,8 +3,9 @@ import { createBuyer } from '../services/buyerService'
 import { sendBuyerEmail } from '../services/emailService'
 import { sendBuyerSms } from '../services/smsService'
 import { type BuyerInsert } from '../lib/supabase'
-import { UserPlus, AlertCircle, CheckCircle2, ChevronRight, Mail, XCircle, Smartphone } from 'lucide-react'
+import { UserPlus, AlertCircle, CheckCircle2, ChevronRight, Mail, XCircle, Smartphone, Lock } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useAuth } from '../context/AuthContext'
 
 interface AddBuyerFormProps {
   onSuccess?: () => void
@@ -48,6 +49,7 @@ function validateMobile(mobile: string): boolean {
 }
 
 export default function AddBuyerForm({ onSuccess, onNavigateToBuyers }: AddBuyerFormProps) {
+  const { isViewer } = useAuth()
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
@@ -99,6 +101,10 @@ export default function AddBuyerForm({ onSuccess, onNavigateToBuyers }: AddBuyer
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (isViewer) {
+      toast.error('View-only profile cannot register buyers.')
+      return
+    }
     if (!validate()) return
 
     setSubmitting(true)
@@ -171,6 +177,41 @@ export default function AddBuyerForm({ onSuccess, onNavigateToBuyers }: AddBuyer
     setCreatedId(null)
     setEmailResult(null)
     setSmsResult(null)
+  }
+
+  if (isViewer) {
+    return (
+      <div className="card fade-in" style={{ maxWidth: 600, margin: '40px auto' }}>
+        <div className="card-body" style={{ textAlign: 'center', padding: '48px 32px' }}>
+          <div
+            style={{
+              width: 64,
+              height: 64,
+              background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+              boxShadow: '0 8px 24px rgba(217,119,6,0.18)',
+              color: '#b45309',
+            }}
+          >
+            <Lock size={30} />
+          </div>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1a1f35', marginBottom: 8 }}>
+            View-Only Access
+          </h2>
+          <p style={{ color: '#64748b', fontSize: 14, maxWidth: 420, margin: '0 auto 24px', lineHeight: 1.6 }}>
+            You are currently signed in with an observer account. You have full read-only visibility across the system, but adding buyers or dispatching emails is restricted.
+          </p>
+          <button className="btn btn-primary" onClick={onNavigateToBuyers}>
+            View Attendees Directory
+            <ChevronRight size={15} />
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (submitted) {

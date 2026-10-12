@@ -45,7 +45,7 @@ type SortField = 'name' | 'email' | 'company' | 'created_at'
 type SortDir = 'asc' | 'desc'
 
 export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps) {
-  const { canDeleteBuyers } = useAuth()
+  const { canDeleteBuyers, isViewer } = useAuth()
   const [buyers, setBuyers] = useState<Buyer[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -128,6 +128,10 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
   }
 
   async function handleResendEmail(buyer: Buyer) {
+    if (isViewer) {
+      toast.error('View-only profile cannot send emails.')
+      return
+    }
     setSendingEmailId(buyer.id)
     const { success, error } = await sendBuyerEmail(buyer.id, buyer)
     setSendingEmailId(null)
@@ -151,6 +155,10 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
   }
 
   async function handleSendSms(buyer: Buyer) {
+    if (isViewer) {
+      toast.error('View-only profile cannot send SMS.')
+      return
+    }
     setSendingSmsId(buyer.id)
     const { success, error } = await sendBuyerSms(buyer.id, buyer)
     setSendingSmsId(null)
@@ -203,12 +211,14 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
             {buyers.length} registered participant{buyers.length !== 1 ? 's' : ''} for CBA Forum
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-primary" onClick={onAddBuyer}>
-            <UserPlus size={15} />
-            Add Buyer
-          </button>
-        </div>
+        {!isViewer && (
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn btn-primary" onClick={onAddBuyer}>
+              <UserPlus size={15} />
+              Add Buyer
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="card">
@@ -257,7 +267,7 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
                 ? 'Try different keywords or clear the search.'
                 : 'Get started by adding your first buyer.'}
             </p>
-            {!searchQuery && (
+            {!searchQuery && !isViewer && (
               <button className="btn btn-primary" onClick={onAddBuyer}>
                 <UserPlus size={15} />
                 Add First Buyer
@@ -366,6 +376,7 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
                         sentAt={buyer.email_sent_at}
                         error={buyer.email_error}
                         isSending={sendingEmailId === buyer.id}
+                        isViewer={isViewer}
                         onResend={() => handleResendEmail(buyer)}
                       />
                     </td>
@@ -376,13 +387,14 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
                         sentAt={buyer.sms_sent_at}
                         error={buyer.sms_error}
                         isSending={sendingSmsId === buyer.id}
+                        isViewer={isViewer}
                         onSend={() => handleSendSms(buyer)}
                       />
                     </td>
                     <td style={{ fontSize: 12, color: '#8892aa' }}>
                       {formatDate(buyer.created_at)}
                     </td>
-                      <td onClick={(e) => e.stopPropagation()}>
+                    <td onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         {buyer.payment_status === 'paid' && (
                           <button
@@ -394,46 +406,53 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
                             <QrCode size={14} />
                           </button>
                         )}
-                        <button
-                          className="btn btn-sm btn-secondary"
-                          style={{ padding: '5px 8px', color: '#16a34a' }}
-                          onClick={() => openWhatsApp(buyer)}
-                          title="Open WhatsApp chat with pre-filled ticket message"
-                        >
-                          <MessageCircle size={14} />
-                        </button>
-                        {canDeleteBuyers ? (
+                        {!isViewer && (
                           <button
-                            className="btn btn-sm btn-danger"
-                            style={{ padding: '5px 8px' }}
-                            onClick={() => handleDelete(buyer)}
-                            disabled={deletingId === buyer.id}
-                            title="Delete buyer record (Super Admin only)"
+                            className="btn btn-sm btn-secondary"
+                            style={{ padding: '5px 8px', color: '#16a34a' }}
+                            onClick={() => openWhatsApp(buyer)}
+                            title="Open WhatsApp chat with pre-filled ticket message"
                           >
-                            {deletingId === buyer.id ? (
-                              <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
-                            ) : (
-                              <Trash2 size={13} />
-                            )}
+                            <MessageCircle size={14} />
                           </button>
-                        ) : (
-                          <button
-                            className="btn btn-sm"
-                            style={{
-                              padding: '5px 8px',
-                              background: '#f1f5f9',
-                              color: '#94a3b8',
-                              border: '1px solid #e2e8f0',
-                              cursor: 'not-allowed',
-                              opacity: 0.75,
-                            }}
-                            onClick={() =>
-                              toast.error('Permission Denied: Only Super Admin can delete buyer records.')
-                            }
-                            title="Delete restricted (Super Admin only)"
-                          >
-                            <Lock size={12} />
-                          </button>
+                        )}
+                        {!isViewer && (
+                          canDeleteBuyers ? (
+                            <button
+                              className="btn btn-sm btn-danger"
+                              style={{ padding: '5px 8px' }}
+                              onClick={() => handleDelete(buyer)}
+                              disabled={deletingId === buyer.id}
+                              title="Delete buyer record (Super Admin only)"
+                            >
+                              {deletingId === buyer.id ? (
+                                <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                              ) : (
+                                <Trash2 size={13} />
+                              )}
+                            </button>
+                          ) : (
+                            <button
+                              className="btn btn-sm"
+                              style={{
+                                padding: '5px 8px',
+                                background: '#f1f5f9',
+                                color: '#94a3b8',
+                                border: '1px solid #e2e8f0',
+                                cursor: 'not-allowed',
+                                opacity: 0.75,
+                              }}
+                              onClick={() =>
+                                toast.error('Permission Denied: Only Super Admin can delete buyer records.')
+                              }
+                              title="Delete restricted (Super Admin only)"
+                            >
+                              <Lock size={12} />
+                            </button>
+                          )
+                        )}
+                        {isViewer && buyer.payment_status !== 'paid' && (
+                          <span style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>View only</span>
                         )}
                       </div>
                     </td>
@@ -463,12 +482,14 @@ function EmailStatusBadge({
   sentAt,
   error,
   isSending,
+  isViewer,
   onResend,
 }: {
   status: string
   sentAt: string | null
   error: string | null
   isSending: boolean
+  isViewer?: boolean
   onResend: () => void
 }) {
   function formatShort(dt: string | null) {
@@ -496,14 +517,16 @@ function EmailStatusBadge({
         {sentAt && (
           <span style={{ fontSize: 10, color: '#b0b8d8' }}>{formatShort(sentAt)}</span>
         )}
-        <button
-          className="btn btn-sm btn-secondary"
-          style={{ padding: '2px 7px', fontSize: 11, marginTop: 2 }}
-          onClick={onResend}
-          title="Resend email"
-        >
-          <SendHorizonal size={10} /> Resend
-        </button>
+        {!isViewer && (
+          <button
+            className="btn btn-sm btn-secondary"
+            style={{ padding: '2px 7px', fontSize: 11, marginTop: 2 }}
+            onClick={onResend}
+            title="Resend email"
+          >
+            <SendHorizonal size={10} /> Resend
+          </button>
+        )}
       </div>
     )
   }
@@ -519,13 +542,15 @@ function EmailStatusBadge({
             {error.slice(0, 50)}{error.length > 50 ? '…' : ''}
           </span>
         )}
-        <button
-          className="btn btn-sm btn-primary"
-          style={{ padding: '2px 8px', fontSize: 11, marginTop: 2 }}
-          onClick={onResend}
-        >
-          <SendHorizonal size={10} /> Retry
-        </button>
+        {!isViewer && (
+          <button
+            className="btn btn-sm btn-primary"
+            style={{ padding: '2px 8px', fontSize: 11, marginTop: 2 }}
+            onClick={onResend}
+          >
+            <SendHorizonal size={10} /> Retry
+          </button>
+        )}
       </div>
     )
   }
@@ -535,13 +560,15 @@ function EmailStatusBadge({
       <span className="badge badge-gray">
         <Mail size={11} /> Not Sent
       </span>
-      <button
-        className="btn btn-sm btn-primary"
-        style={{ padding: '3px 8px', fontSize: 11 }}
-        onClick={onResend}
-      >
-        <SendHorizonal size={10} /> Send
-      </button>
+      {!isViewer && (
+        <button
+          className="btn btn-sm btn-primary"
+          style={{ padding: '3px 8px', fontSize: 11 }}
+          onClick={onResend}
+        >
+          <SendHorizonal size={10} /> Send
+        </button>
+      )}
     </div>
   )
 }
@@ -551,12 +578,14 @@ function SmsStatusBadge({
   sentAt,
   error,
   isSending,
+  isViewer,
   onSend,
 }: {
   status: string
   sentAt: string | null
   error: string | null
   isSending: boolean
+  isViewer?: boolean
   onSend: () => void
 }) {
   function formatShort(dt: string | null) {
@@ -584,14 +613,16 @@ function SmsStatusBadge({
         {sentAt && (
           <span style={{ fontSize: 10, color: '#b0b8d8' }}>{formatShort(sentAt)}</span>
         )}
-        <button
-          className="btn btn-sm btn-secondary"
-          style={{ padding: '2px 7px', fontSize: 11, marginTop: 2 }}
-          onClick={onSend}
-          title="Resend SMS"
-        >
-          <SendHorizonal size={10} /> Resend
-        </button>
+        {!isViewer && (
+          <button
+            className="btn btn-sm btn-secondary"
+            style={{ padding: '2px 7px', fontSize: 11, marginTop: 2 }}
+            onClick={onSend}
+            title="Resend SMS"
+          >
+            <SendHorizonal size={10} /> Resend
+          </button>
+        )}
       </div>
     )
   }
@@ -607,13 +638,15 @@ function SmsStatusBadge({
             {error.slice(0, 50)}{error.length > 50 ? '…' : ''}
           </span>
         )}
-        <button
-          className="btn btn-sm btn-primary"
-          style={{ padding: '2px 8px', fontSize: 11, marginTop: 2 }}
-          onClick={onSend}
-        >
-          <SendHorizonal size={10} /> Retry
-        </button>
+        {!isViewer && (
+          <button
+            className="btn btn-sm btn-primary"
+            style={{ padding: '2px 8px', fontSize: 11, marginTop: 2 }}
+            onClick={onSend}
+          >
+            <SendHorizonal size={10} /> Retry
+          </button>
+        )}
       </div>
     )
   }
@@ -623,13 +656,15 @@ function SmsStatusBadge({
       <span className="badge badge-gray">
         <Smartphone size={11} /> Not Sent
       </span>
-      <button
-        className="btn btn-sm btn-primary"
-        style={{ padding: '3px 8px', fontSize: 11 }}
-        onClick={onSend}
-      >
-        <SendHorizonal size={10} /> Send SMS
-      </button>
+      {!isViewer && (
+        <button
+          className="btn btn-sm btn-primary"
+          style={{ padding: '3px 8px', fontSize: 11 }}
+          onClick={onSend}
+        >
+          <SendHorizonal size={10} /> Send SMS
+        </button>
+      )}
     </div>
   )
 }
