@@ -81,7 +81,8 @@ export async function sendBuyerTicketEmail(
 export async function confirmPaymentAndIssueTicket(
   buyerId: string,
   paymentRef: string,
-  existingBuyer?: Buyer
+  existingBuyer?: Buyer,
+  sendEmail: boolean = true
 ): Promise<{ success: boolean; error?: string; ticket_number?: string }> {
   const ticketNum = existingBuyer?.ticket_number || generateTicketNumber(buyerId)
   const now = new Date().toISOString()
@@ -101,20 +102,27 @@ export async function confirmPaymentAndIssueTicket(
     return { success: false, error: dbError.message }
   }
 
-  // 2. Automatically dispatch ticket confirmation email
-  const updatedBuyer: Partial<Buyer> = {
-    ...(existingBuyer || {}),
-    payment_status: 'paid',
-    payment_ref: paymentRef,
-    ticket_number: ticketNum,
-  }
+  // 2. Dispatch ticket confirmation email if requested
+  if (sendEmail) {
+    const updatedBuyer: Partial<Buyer> = {
+      ...(existingBuyer || {}),
+      payment_status: 'paid',
+      payment_ref: paymentRef,
+      ticket_number: ticketNum,
+    }
 
-  const emailRes = await sendBuyerTicketEmail(buyerId, updatedBuyer)
+    const emailRes = await sendBuyerTicketEmail(buyerId, updatedBuyer)
+
+    return {
+      success: true,
+      ticket_number: ticketNum,
+      error: emailRes.success ? undefined : `Payment confirmed, but ticket email failed: ${emailRes.error}`,
+    }
+  }
 
   return {
     success: true,
     ticket_number: ticketNum,
-    error: emailRes.success ? undefined : `Payment confirmed, but ticket email failed: ${emailRes.error}`,
   }
 }
 

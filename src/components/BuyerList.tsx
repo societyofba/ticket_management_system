@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { getBuyers, deleteBuyer, searchBuyers } from '../services/buyerService'
 import { sendBuyerEmail } from '../services/emailService'
 import { sendBuyerSms } from '../services/smsService'
+import { confirmPaymentAndIssueTicket } from '../services/ticketService'
 import { type Buyer } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -19,6 +20,7 @@ import {
   Smartphone,
   QrCode,
   Lock,
+  CheckCircle2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import TicketModal from './TicketModal'
@@ -57,6 +59,12 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [selectedTicketBuyer, setSelectedTicketBuyer] = useState<Buyer | null>(null)
   const [settings, setSettings] = useState<Record<string, string>>({})
+
+  // Quick Confirm Paid modal in BuyerList
+  const [confirmingBuyer, setConfirmingBuyer] = useState<Buyer | null>(null)
+  const [payhereRefInput, setPayhereRefInput] = useState('')
+  const [sendTicketEmailOnConfirm, setSendTicketEmailOnConfirm] = useState(true)
+  const [confirmingLoading, setConfirmingLoading] = useState(false)
 
   const loadBuyers = useCallback(async () => {
     setLoading(true)
@@ -186,6 +194,37 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
     const phone = rawNumber.startsWith('0') ? '94' + rawNumber.slice(1) : rawNumber.startsWith('94') ? rawNumber : '94' + rawNumber
     const text = encodeURIComponent(`Hi ${buyer.name}, you are eligible to participate in CBA Forum 2026. Location: Waters Edge Hotel. Time: 3:00 PM - 7:00 PM. Ticket: LKR 3,000. Book seat: https://pay.cbaforum.lk`)
     window.open(`https://wa.me/${phone}?text=${text}`, '_blank')
+  }
+
+  async function handleConfirmPaidSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (isViewer) {
+      toast.error('View-only profile cannot confirm payments.')
+      return
+    }
+    if (!confirmingBuyer) return
+
+    setConfirmingLoading(true)
+    const { success, ticket_number, error } = await confirmPaymentAndIssueTicket(
+      confirmingBuyer.id,
+      payhereRefInput.trim(),
+      confirmingBuyer,
+      sendTicketEmailOnConfirm
+    )
+    setConfirmingLoading(false)
+
+    if (success) {
+      toast.success(
+        sendTicketEmailOnConfirm
+          ? `Payment confirmed! Ticket ${ticket_number} generated & emailed!`
+          : `Payment confirmed! Ticket ${ticket_number} generated!`
+      )
+      setConfirmingBuyer(null)
+      setPayhereRefInput('')
+      loadBuyers()
+    } else {
+      toast.error(`Confirmation failed: ${error}`)
+    }
   }
 
   function SortIcon({ field }: { field: SortField }) {
@@ -396,7 +435,7 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        {buyer.payment_status === 'paid' && (
+                        {buyer.payment_status === 'paid' ? (
                           <button
                             className="btn btn-sm btn-secondary"
                             style={{ padding: '5px 8px', color: '#2563eb' }}
@@ -405,7 +444,20 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
                           >
                             <QrCode size={14} />
                           </button>
-                        )}
+                        ) : !isViewer ? (
+                          <button
+                            className="btn btn-sm btn-primary"
+                            style={{ padding: '4px 8px', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            onClick={() => {
+                              setConfirmingBuyer(buyer)
+                              setPayhereRefInput('')
+                              setSendTicketEmailOnConfirm(true)
+                            }}
+                            title="Confirm payment & issue official ticket pass"
+                          >
+                            <CheckCircle2 size={12} /> Confirm Paid
+                          </button>
+                        ) : null}
                         {!isViewer && (
                           <button
                             className="btn btn-sm btn-secondary"
@@ -463,6 +515,106 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
           </div>
         )}
       </div>
+
+      {/* Quick Confirm Payment Dialog */}
+      {confirmingBuyer && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={() => setConfirmingBuyer(null)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: 16,
+              maxWidth: 480,
+              width: '100%',
+              padding: 24,
+              boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="fade-in"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <CheckCircle2 size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
+                  Confirm Payment &amp; Issue Ticket
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>
+                  Assigns official ticket number and marks buyer as paid.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14, margin: '16px 0' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{confirmingBuyer.name}</div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{confirmingBuyer.email} &bull; {confirmingBuyer.mobile}</div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{confirmingBuyer.company} &bull; {confirmingBuyer.designation}</div>
+            </div>
+
+            <form onSubmit={handleConfirmPaidSubmit}>
+              <div className="form-group">
+                <label className="form-label">PayHere Payment ID / Transaction Ref (Optional)</label>
+                <input
+                  className="form-control"
+                  placeholder="e.g. 12003450 or PayHere Online"
+                  value={payhereRefInput}
+                  onChange={(e) => setPayhereRefInput(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '14px 0 20px', padding: '10px 12px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                <input
+                  type="checkbox"
+                  id="send_ticket_confirm"
+                  checked={sendTicketEmailOnConfirm}
+                  onChange={(e) => setSendTicketEmailOnConfirm(e.target.checked)}
+                  style={{ width: 16, height: 16, cursor: 'pointer' }}
+                />
+                <label htmlFor="send_ticket_confirm" style={{ fontSize: 12.5, color: '#166534', cursor: 'pointer', margin: 0, fontWeight: 600 }}>
+                  Email official E-Ticket pass to buyer immediately
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setConfirmingBuyer(null)}
+                  disabled={confirmingLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={confirmingLoading}
+                  style={{ minWidth: 140 }}
+                >
+                  {confirmingLoading ? (
+                    <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Issuing Ticket…</>
+                  ) : (
+                    'Confirm & Issue Ticket'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Ticket Modal */}
       {selectedTicketBuyer && (

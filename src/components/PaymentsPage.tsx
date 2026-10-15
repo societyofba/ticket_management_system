@@ -31,6 +31,7 @@ export default function PaymentsPage() {
   // Confirm Payment Dialog state
   const [confirmingBuyer, setConfirmingBuyer] = useState<Buyer | null>(null)
   const [payhereRefInput, setPayhereRefInput] = useState('')
+  const [sendTicketEmailOnConfirm, setSendTicketEmailOnConfirm] = useState(true)
   const [confirmingLoading, setConfirmingLoading] = useState(false)
 
   // Ticket Modal state
@@ -87,12 +88,17 @@ export default function PaymentsPage() {
     const { success, ticket_number, error } = await confirmPaymentAndIssueTicket(
       confirmingBuyer.id,
       payhereRefInput.trim(),
-      confirmingBuyer
+      confirmingBuyer,
+      sendTicketEmailOnConfirm
     )
     setConfirmingLoading(false)
 
     if (success) {
-      toast.success(`Payment confirmed! Ticket ${ticket_number} generated & emailed!`)
+      toast.success(
+        sendTicketEmailOnConfirm
+          ? `Payment confirmed! Ticket ${ticket_number} generated & emailed!`
+          : `Payment confirmed! Ticket ${ticket_number} generated!`
+      )
       setConfirmingBuyer(null)
       setPayhereRefInput('')
       loadData()
@@ -499,6 +505,19 @@ export default function PaymentsPage() {
                 <p className="form-hint">Reference number from your PayHere merchant dashboard.</p>
               </div>
 
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '14px 0 20px', padding: '10px 12px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                <input
+                  type="checkbox"
+                  id="send_ticket_confirm_pay"
+                  checked={sendTicketEmailOnConfirm}
+                  onChange={(e) => setSendTicketEmailOnConfirm(e.target.checked)}
+                  style={{ width: 16, height: 16, cursor: 'pointer' }}
+                />
+                <label htmlFor="send_ticket_confirm_pay" style={{ fontSize: 12.5, color: '#166534', cursor: 'pointer', margin: 0, fontWeight: 600 }}>
+                  Email official E-Ticket pass to buyer immediately
+                </label>
+              </div>
+
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
                 <button
                   type="button"
@@ -517,7 +536,7 @@ export default function PaymentsPage() {
                   {confirmingLoading ? (
                     <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Issuing Ticket…</>
                   ) : (
-                    'Confirm & Send Ticket'
+                    sendTicketEmailOnConfirm ? 'Confirm & Send Ticket' : 'Confirm & Issue Ticket'
                   )}
                 </button>
               </div>
