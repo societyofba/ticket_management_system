@@ -15,13 +15,16 @@ import {
   ShieldCheck,
   AlertCircle,
   FileCheck2,
+  Pencil,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import TicketModal from './TicketModal'
+import EditBuyerModal from './EditBuyerModal'
 import { useAuth } from '../context/AuthContext'
+import { extractPriceNumber } from '../utils/priceUtils'
 
 export default function PaymentsPage() {
-  const { isViewer } = useAuth()
+  const { isViewer, isSuperAdmin } = useAuth()
   const [buyers, setBuyers] = useState<Buyer[]>([])
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
@@ -31,8 +34,12 @@ export default function PaymentsPage() {
   // Confirm Payment Dialog state
   const [confirmingBuyer, setConfirmingBuyer] = useState<Buyer | null>(null)
   const [payhereRefInput, setPayhereRefInput] = useState('')
+  const [confirmPriceInput, setConfirmPriceInput] = useState('')
   const [sendTicketEmailOnConfirm, setSendTicketEmailOnConfirm] = useState(true)
   const [confirmingLoading, setConfirmingLoading] = useState(false)
+
+  // Edit Buyer Modal state (Super Admin)
+  const [editingBuyer, setEditingBuyer] = useState<Buyer | null>(null)
 
   // Ticket Modal state
   const [selectedTicketBuyer, setSelectedTicketBuyer] = useState<Buyer | null>(null)
@@ -73,8 +80,10 @@ export default function PaymentsPage() {
   // Statistics
   const totalPaid = buyers.filter((b) => b.payment_status === 'paid').length
   const totalPending = buyers.filter((b) => b.payment_status !== 'paid').length
-  const priceValue = parseInt((settings.ticket_price || '3000').replace(/[^0-9]/g, '')) || 3000
-  const totalRevenue = totalPaid * priceValue
+  // Dynamic revenue: extract only numeric digits from each paid buyer's ticket_price (0 if null/text)
+  const totalRevenue = buyers
+    .filter((b) => b.payment_status === 'paid')
+    .reduce((acc, b) => acc + extractPriceNumber(b.ticket_price), 0)
 
   async function handleConfirmPaymentSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -89,7 +98,8 @@ export default function PaymentsPage() {
       confirmingBuyer.id,
       payhereRefInput.trim(),
       confirmingBuyer,
-      sendTicketEmailOnConfirm
+      sendTicketEmailOnConfirm,
+      confirmPriceInput.trim() || undefined
     )
     setConfirmingLoading(false)
 
@@ -101,6 +111,7 @@ export default function PaymentsPage() {
       )
       setConfirmingBuyer(null)
       setPayhereRefInput('')
+      setConfirmPriceInput('')
       loadData()
     } else {
       toast.error(`Confirmation failed: ${error}`)
@@ -298,6 +309,7 @@ export default function PaymentsPage() {
                   <th>Company & Position</th>
                   <th>Mobile</th>
                   <th>Payment Status</th>
+                  <th>Ticket Fee</th>
                   <th>Ticket Number</th>
                   <th>PayHere Ref</th>
                   <th>Ticket Email</th>
@@ -357,6 +369,40 @@ export default function PaymentsPage() {
                         )}
                       </td>
                       <td>
+                        {buyer.ticket_price ? (
+                          <span
+                            style={{
+                              fontWeight: 700,
+                              color: '#0f172a',
+                              fontSize: 12.5,
+                              background: '#f1f5f9',
+                              padding: '3px 8px',
+                              borderRadius: 6,
+                              display: 'inline-block',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {buyer.ticket_price}
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: '#b45309',
+                              background: '#fef3c7',
+                              padding: '2px 7px',
+                              borderRadius: 6,
+                              display: 'inline-block',
+                              whiteSpace: 'nowrap',
+                            }}
+                            title="Price not yet set. Click Edit to assign."
+                          >
+                            Not Set
+                          </span>
+                        )}
+                      </td>
+                      <td>
                         {buyer.ticket_number ? (
                           <code style={{ background: '#f1f5f9', color: '#0f172a', padding: '3px 7px', borderRadius: 6, fontWeight: 700, fontSize: 12 }}>
                             {buyer.ticket_number}
@@ -395,16 +441,29 @@ export default function PaymentsPage() {
                             isViewer ? (
                               <span style={{ fontSize: 11.5, color: '#94a3b8', fontStyle: 'italic' }}>Pending</span>
                             ) : (
-                              <button
-                                className="btn btn-sm btn-primary"
-                                onClick={() => {
-                                  setConfirmingBuyer(buyer)
-                                  setPayhereRefInput('')
-                                }}
-                                style={{ padding: '4px 10px', fontSize: 11.5, fontWeight: 700 }}
-                              >
-                                Confirm Paid
-                              </button>
+                              <>
+                                <button
+                                  className="btn btn-sm btn-primary"
+                                  onClick={() => {
+                                    setConfirmingBuyer(buyer)
+                                    setPayhereRefInput('')
+                                    setConfirmPriceInput(buyer.ticket_price || settings.ticket_price || 'LKR 3,500')
+                                  }}
+                                  style={{ padding: '4px 10px', fontSize: 11.5, fontWeight: 700 }}
+                                >
+                                  Confirm Paid
+                                </button>
+                                {isSuperAdmin && (
+                                  <button
+                                    className="btn btn-sm btn-secondary"
+                                    onClick={() => setEditingBuyer(buyer)}
+                                    style={{ padding: '4px 7px', color: '#4f46e5' }}
+                                    title="Edit attendee details and custom price"
+                                  >
+                                    <Pencil size={13} />
+                                  </button>
+                                )}
+                              </>
                             )
                           ) : (
                             <>
@@ -429,6 +488,16 @@ export default function PaymentsPage() {
                                   ) : (
                                     <SendHorizonal size={12} />
                                   )}
+                                </button>
+                              )}
+                              {isSuperAdmin && (
+                                <button
+                                  className="btn btn-sm btn-secondary"
+                                  onClick={() => setEditingBuyer(buyer)}
+                                  style={{ padding: '4px 7px', color: '#4f46e5' }}
+                                  title="Edit attendee details and custom price"
+                                >
+                                  <Pencil size={13} />
                                 </button>
                               )}
                             </>
@@ -505,6 +574,19 @@ export default function PaymentsPage() {
                 <p className="form-hint">Reference number from your PayHere merchant dashboard.</p>
               </div>
 
+              <div className="form-group">
+                <label className="form-label">Ticket Price / Fee (Text)</label>
+                <input
+                  className="form-control"
+                  placeholder="e.g. LKR 3,500 or USD 50 or Complimentary"
+                  value={confirmPriceInput}
+                  onChange={(e) => setConfirmPriceInput(e.target.value)}
+                />
+                <p className="form-hint">
+                  Custom price printed on ticket. Numbers will be parsed for total revenue.
+                </p>
+              </div>
+
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '14px 0 20px', padding: '10px 12px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
                 <input
                   type="checkbox"
@@ -543,6 +625,19 @@ export default function PaymentsPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Super Admin Edit Buyer Modal */}
+      {editingBuyer && (
+        <EditBuyerModal
+          buyer={editingBuyer}
+          eventSettings={settings}
+          onClose={() => setEditingBuyer(null)}
+          onSaved={(updated) => {
+            setBuyers((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
+            setEditingBuyer(null)
+          }}
+        />
       )}
 
       {/* Ticket Modal */}

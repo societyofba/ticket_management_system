@@ -75,6 +75,7 @@ export default function AddBuyerForm({ onSuccess, onNavigateToBuyers }: AddBuyer
   // Payment status & manual email dispatch options
   const [paymentStatus, setPaymentStatus] = useState<'paid' | 'unpaid'>('paid')
   const [paymentRef, setPaymentRef] = useState('')
+  const [customPrice, setCustomPrice] = useState('')
 
   // Success screen states
   const [createdBuyer, setCreatedBuyer] = useState<Buyer | null>(null)
@@ -150,6 +151,7 @@ export default function AddBuyerForm({ onSuccess, onNavigateToBuyers }: AddBuyer
       payment_status: isPaid ? 'paid' : 'unpaid',
       payment_confirmed_at: isPaid ? now : null,
       payment_ref: isPaid ? (paymentRef.trim() || 'PayHere Confirmed') : null,
+      ticket_price: customPrice.trim() || null,
       ticket_number: generatedTicket,
       email_status: 'not_sent',
       ticket_email_status: 'not_sent',
@@ -214,6 +216,7 @@ export default function AddBuyerForm({ onSuccess, onNavigateToBuyers }: AddBuyer
     setErrors({})
     setPaymentStatus('paid')
     setPaymentRef('')
+    setCustomPrice('')
     setSubmitted(false)
     setCreatedBuyer(null)
     setShowTicketModal(false)
@@ -329,6 +332,11 @@ export default function AddBuyerForm({ onSuccess, onNavigateToBuyers }: AddBuyer
               <div>
                 <span style={{ color: '#64748b' }}>Meal:</span> <strong style={{ color: '#1e293b' }}>{createdBuyer.meal_preference === 'vegetarian' ? 'Veg' : 'Non-Veg'}</strong>
               </div>
+              {createdBuyer.ticket_price && (
+                <div>
+                  <span style={{ color: '#64748b' }}>Fee / Price:</span> <strong style={{ color: '#15803d' }}>{createdBuyer.ticket_price}</strong>
+                </div>
+              )}
               {createdBuyer.payment_ref && (
                 <div>
                   <span style={{ color: '#64748b' }}>PayHere Ref:</span> <code style={{ color: '#0f172a' }}>{createdBuyer.payment_ref}</code>
@@ -743,23 +751,42 @@ export default function AddBuyerForm({ onSuccess, onNavigateToBuyers }: AddBuyer
             </div>
           </div>
 
-          {/* If Already Paid: PayHere reference input */}
+          {/* If Already Paid: PayHere reference and custom ticket price */}
           {paymentStatus === 'paid' && (
             <div style={{ background: '#f8fafc', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0', marginBottom: 16 }}>
-              <label className="form-label" htmlFor="payment_ref" style={{ fontSize: 12.5, marginBottom: 6 }}>
-                PayHere Payment ID / Transaction Reference <span style={{ color: '#94a3b8', fontWeight: 400 }}>(Optional)</span>
-              </label>
-              <input
-                id="payment_ref"
-                type="text"
-                className="form-control"
-                placeholder="e.g. 12004859 or PayHere Online / Bank Transfer"
-                value={paymentRef}
-                onChange={(e) => setPaymentRef(e.target.value)}
-              />
-              <p className="form-hint" style={{ marginTop: 4, marginBottom: 0 }}>
-                Optional transaction reference from your PayHere merchant dashboard.
-              </p>
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <label className="form-label" htmlFor="payment_ref" style={{ fontSize: 12.5, marginBottom: 6 }}>
+                  PayHere Payment ID / Transaction Reference <span style={{ color: '#94a3b8', fontWeight: 400 }}>(Optional)</span>
+                </label>
+                <input
+                  id="payment_ref"
+                  type="text"
+                  className="form-control"
+                  placeholder="e.g. 12004859 or PayHere Online / Bank Transfer"
+                  value={paymentRef}
+                  onChange={(e) => setPaymentRef(e.target.value)}
+                />
+                <p className="form-hint" style={{ marginTop: 4, marginBottom: 0 }}>
+                  Optional transaction reference from your PayHere merchant dashboard.
+                </p>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" htmlFor="custom_price" style={{ fontSize: 12.5, marginBottom: 6 }}>
+                  Ticket Price / Fee (Text) <span style={{ color: '#94a3b8', fontWeight: 400 }}>(Optional - e.g. LKR 3,500, USD 50, Complimentary)</span>
+                </label>
+                <input
+                  id="custom_price"
+                  type="text"
+                  className="form-control"
+                  placeholder="e.g. LKR 3,500 or USD 50 or Complimentary"
+                  value={customPrice}
+                  onChange={(e) => setCustomPrice(e.target.value)}
+                />
+                <p className="form-hint" style={{ marginTop: 4, marginBottom: 0 }}>
+                  Printed on ticket. Only numeric digits will be counted in total revenue.
+                </p>
+              </div>
             </div>
           )}
 

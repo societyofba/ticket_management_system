@@ -11,23 +11,16 @@ export async function sendBuyerTicketEmail(
   buyerId: string,
   buyerData?: Partial<Buyer>
 ): Promise<{ success: boolean; error?: string; ticket_number?: string }> {
-  let formattedBuyer = buyerData
-  if (formattedBuyer) {
-    const rawMeal = (formattedBuyer.meal_preference as string) || ''
-    formattedBuyer = {
-      ...formattedBuyer,
-      meal_preference: rawMeal === 'vegetarian' || rawMeal.toLowerCase().includes('veg') && !rawMeal.toLowerCase().includes('non')
-        ? 'Veg' as any
-        : 'Non-Veg' as any,
-    }
-  } else {
-    const { data: b } = await supabase.from('buyers').select('*').eq('id', buyerId).single()
-    if (b) {
-      formattedBuyer = {
-        ...b,
-        meal_preference: (b.meal_preference === 'vegetarian' ? 'Veg' : 'Non-Veg') as any,
-      }
-    }
+  // Always fetch fresh record from database so latest ticket_price is included
+  const { data: dbBuyer } = await supabase.from('buyers').select('*').eq('id', buyerId).single()
+  const merged = { ...(dbBuyer || {}), ...(buyerData || {}) }
+
+  const rawMeal = (merged.meal_preference as string) || ''
+  const formattedBuyer = {
+    ...merged,
+    meal_preference: rawMeal === 'vegetarian' || (rawMeal.toLowerCase().includes('veg') && !rawMeal.toLowerCase().includes('non'))
+      ? 'Veg' as any
+      : 'Non-Veg' as any,
   }
 
   // Mark as sending in DB
@@ -82,20 +75,26 @@ export async function confirmPaymentAndIssueTicket(
   buyerId: string,
   paymentRef: string,
   existingBuyer?: Buyer,
-  sendEmail: boolean = true
+  sendEmail: boolean = true,
+  ticketPrice?: string
 ): Promise<{ success: boolean; error?: string; ticket_number?: string }> {
   const ticketNum = existingBuyer?.ticket_number || generateTicketNumber(buyerId)
   const now = new Date().toISOString()
 
   // 1. Update buyer to 'paid' in DB
+  const updatePayload: Record<string, unknown> = {
+    payment_status: 'paid',
+    payment_confirmed_at: now,
+    payment_ref: paymentRef.trim() || 'PayHere Confirmed',
+    ticket_number: ticketNum,
+  }
+  if (ticketPrice !== undefined && ticketPrice.trim() !== '') {
+    updatePayload.ticket_price = ticketPrice.trim()
+  }
+
   const { error: dbError } = await supabase
     .from('buyers')
-    .update({
-      payment_status: 'paid',
-      payment_confirmed_at: now,
-      payment_ref: paymentRef.trim() || 'PayHere Confirmed',
-      ticket_number: ticketNum,
-    })
+    .update(updatePayload)
     .eq('id', buyerId)
 
   if (dbError) {
@@ -109,6 +108,7 @@ export async function confirmPaymentAndIssueTicket(
       payment_status: 'paid',
       payment_ref: paymentRef,
       ticket_number: ticketNum,
+      ...(ticketPrice !== undefined && ticketPrice.trim() !== '' ? { ticket_price: ticketPrice.trim() } : {}),
     }
 
     const emailRes = await sendBuyerTicketEmail(buyerId, updatedBuyer)

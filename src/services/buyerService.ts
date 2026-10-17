@@ -45,3 +45,18 @@ export async function searchBuyers(
   if (error) return { data: null, error: error.message }
   return { data, error: null }
 }
+
+export async function updateBuyer(
+  id: string,
+  updates: Partial<Buyer>
+): Promise<{ data: Buyer | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('buyers')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) return { data: null, error: error.message }
+  return { data, error: null }
+}

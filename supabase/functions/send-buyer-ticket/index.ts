@@ -46,11 +46,13 @@ Deno.serve(async (req: Request) => {
       auth: { persistSession: false },
     })
 
-    if (!buyer && buyer_id) {
+    const targetId = buyer_id || buyer?.id
+
+    if (targetId) {
       const { data, error: buyerErr } = await supabase
         .from('buyers')
         .select('*')
-        .eq('id', buyer_id)
+        .eq('id', targetId)
         .maybeSingle()
 
       if (buyerErr) {
@@ -59,7 +61,13 @@ Deno.serve(async (req: Request) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
-      buyer = data
+      if (data) {
+        buyer = {
+          ...data,
+          ...(buyer || {}),
+          ticket_price: buyer?.ticket_price || data.ticket_price,
+        }
+      }
     }
 
     if (!buyer || !buyer.email) {
@@ -68,8 +76,6 @@ Deno.serve(async (req: Request) => {
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-
-    const targetId = buyer_id || buyer.id
 
     // Ensure buyer has a unique ticket number
     let ticketNumber = buyer.ticket_number
@@ -125,7 +131,7 @@ Deno.serve(async (req: Request) => {
         .replace(/{{event_name}}/g,      s.event_name)
         .replace(/{{event_location}}/g,  s.event_location)
         .replace(/{{event_time}}/g,      s.event_time)
-        .replace(/{{ticket_price}}/g,    s.ticket_price)
+        .replace(/{{ticket_price}}/g,    buyer.ticket_price || s.ticket_price || 'LKR 3,500')
 
     const subject = fill(s.ticket_email_subject || 'Your Official E-Ticket – CBA Forum 2026')
 
@@ -158,7 +164,7 @@ Deno.serve(async (req: Request) => {
     const plainText = `
 OFFICIAL E-TICKET: ${s.event_name}
 Ticket Number: ${ticketNumber}
-Status: CONFIRMED & PAID (${s.ticket_price})
+Status: CONFIRMED & PAID (${buyer.ticket_price || s.ticket_price || 'LKR 3,500'})
 
 Attendee Details:
 - Name: ${buyer.name}

@@ -1,26 +1,25 @@
 import { useEffect, useState } from 'react'
 import { getBuyers } from '../services/buyerService'
-import { getSettings } from '../services/emailService'
 import { Users, CreditCard, Clock, FileCheck2 } from 'lucide-react'
 import type { Buyer } from '../lib/supabase'
+import { extractPriceNumber } from '../utils/priceUtils'
 
 export default function Dashboard() {
   const [buyers, setBuyers] = useState<Buyer[]>([])
-  const [settings, setSettings] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([getBuyers(), getSettings()]).then(([buyersRes, settingsRes]) => {
+    getBuyers().then((buyersRes) => {
       setBuyers(buyersRes.data ?? [])
-      if (settingsRes) setSettings(settingsRes)
       setLoading(false)
     })
   }, [])
 
   const paidCount = buyers.filter((b) => b.payment_status === 'paid').length
   const pendingCount = buyers.filter((b) => b.payment_status !== 'paid').length
-  const priceValue = parseInt((settings.ticket_price || '3000').replace(/[^0-9]/g, '')) || 3000
-  const totalRevenue = paidCount * priceValue
+  const totalRevenue = buyers
+    .filter((b) => b.payment_status === 'paid')
+    .reduce((sum, b) => sum + extractPriceNumber(b.ticket_price), 0)
   const recentBuyers = buyers.slice(0, 5)
 
   return (

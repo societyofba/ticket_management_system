@@ -49,6 +49,7 @@ export interface Buyer {
   ticket_email_error: string | null
   checked_in: boolean
   checked_in_at: string | null
+  ticket_price?: string | null
   created_at: string
   updated_at: string
 }

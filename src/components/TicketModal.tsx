@@ -244,7 +244,7 @@ export default function TicketModal({ buyer, eventSettings, onClose, onTicketSen
                     fontWeight: 700,
                   }}
                 >
-                  <CheckCircle2 size={12} /> CONFIRMED &bull; {eventSettings.ticket_price || 'LKR 3,000'}
+                  <CheckCircle2 size={12} /> CONFIRMED &bull; {buyer.ticket_price || eventSettings.ticket_price || 'LKR 3,500'}
                 </span>
                 {buyer.payment_ref && (
                   <div style={{ fontSize: 11, color: '#64748b', marginTop: 3 }}>

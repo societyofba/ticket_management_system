@@ -63,6 +63,7 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
   // Quick Confirm Paid modal in BuyerList
   const [confirmingBuyer, setConfirmingBuyer] = useState<Buyer | null>(null)
   const [payhereRefInput, setPayhereRefInput] = useState('')
+  const [confirmPriceInput, setConfirmPriceInput] = useState('')
   const [sendTicketEmailOnConfirm, setSendTicketEmailOnConfirm] = useState(true)
   const [confirmingLoading, setConfirmingLoading] = useState(false)
 
@@ -209,7 +210,8 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
       confirmingBuyer.id,
       payhereRefInput.trim(),
       confirmingBuyer,
-      sendTicketEmailOnConfirm
+      sendTicketEmailOnConfirm,
+      confirmPriceInput.trim() || undefined
     )
     setConfirmingLoading(false)
 
@@ -221,6 +223,7 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
       )
       setConfirmingBuyer(null)
       setPayhereRefInput('')
+      setConfirmPriceInput('')
       loadBuyers()
     } else {
       toast.error(`Confirmation failed: ${error}`)
@@ -451,6 +454,7 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
                             onClick={() => {
                               setConfirmingBuyer(buyer)
                               setPayhereRefInput('')
+                              setConfirmPriceInput(buyer.ticket_price || settings.ticket_price || 'LKR 3,500')
                               setSendTicketEmailOnConfirm(true)
                             }}
                             title="Confirm payment & issue official ticket pass"
@@ -574,6 +578,19 @@ export default function BuyerList({ onAddBuyer, refreshTrigger }: BuyerListProps
                   onChange={(e) => setPayhereRefInput(e.target.value)}
                   autoFocus
                 />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Ticket Price / Fee (Text)</label>
+                <input
+                  className="form-control"
+                  placeholder="e.g. LKR 3,500 or USD 50 or Complimentary"
+                  value={confirmPriceInput}
+                  onChange={(e) => setConfirmPriceInput(e.target.value)}
+                />
+                <p className="form-hint">
+                  Custom price printed on ticket. Numbers will be parsed for total revenue.
+                </p>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '14px 0 20px', padding: '10px 12px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
