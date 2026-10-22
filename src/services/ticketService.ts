@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import type { Buyer } from '../lib/supabase'
+import { sendBuyerTicketSms } from './smsService'
 
 export function generateTicketNumber(buyerId: string): string {
   const shortId = buyerId.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase()
@@ -76,7 +77,8 @@ export async function confirmPaymentAndIssueTicket(
   paymentRef: string,
   existingBuyer?: Buyer,
   sendEmail: boolean = true,
-  ticketPrice?: string
+  ticketPrice?: string,
+  sendSms: boolean = false
 ): Promise<{ success: boolean; error?: string; ticket_number?: string }> {
   const ticketNum = existingBuyer?.ticket_number || generateTicketNumber(buyerId)
   const now = new Date().toISOString()
@@ -101,28 +103,36 @@ export async function confirmPaymentAndIssueTicket(
     return { success: false, error: dbError.message }
   }
 
+  const updatedBuyer: Partial<Buyer> = {
+    ...(existingBuyer || {}),
+    payment_status: 'paid',
+    payment_ref: paymentRef,
+    ticket_number: ticketNum,
+    ...(ticketPrice !== undefined && ticketPrice.trim() !== '' ? { ticket_price: ticketPrice.trim() } : {}),
+  }
+
+  const errors: string[] = []
+
   // 2. Dispatch ticket confirmation email if requested
   if (sendEmail) {
-    const updatedBuyer: Partial<Buyer> = {
-      ...(existingBuyer || {}),
-      payment_status: 'paid',
-      payment_ref: paymentRef,
-      ticket_number: ticketNum,
-      ...(ticketPrice !== undefined && ticketPrice.trim() !== '' ? { ticket_price: ticketPrice.trim() } : {}),
-    }
-
     const emailRes = await sendBuyerTicketEmail(buyerId, updatedBuyer)
+    if (!emailRes.success) {
+      errors.push(`ticket email failed: ${emailRes.error}`)
+    }
+  }
 
-    return {
-      success: true,
-      ticket_number: ticketNum,
-      error: emailRes.success ? undefined : `Payment confirmed, but ticket email failed: ${emailRes.error}`,
+  // 3. Dispatch ticket confirmation SMS if requested
+  if (sendSms) {
+    const smsRes = await sendBuyerTicketSms(buyerId, updatedBuyer)
+    if (!smsRes.success) {
+      errors.push(`ticket SMS failed: ${smsRes.error}`)
     }
   }
 
   return {
     success: true,
     ticket_number: ticketNum,
+    error: errors.length > 0 ? `Payment confirmed, but ${errors.join(' & ')}` : undefined,
   }
 }
 

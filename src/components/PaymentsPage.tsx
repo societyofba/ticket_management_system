@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { getBuyers } from '../services/buyerService'
 import { confirmPaymentAndIssueTicket, sendBuyerTicketEmail } from '../services/ticketService'
+import { sendBuyerTicketSms } from '../services/smsService'
 import { getSettings } from '../services/emailService'
 import { type Buyer } from '../lib/supabase'
 import {
@@ -10,6 +11,7 @@ import {
   Search,
   RefreshCw,
   SendHorizonal,
+  Smartphone,
   QrCode,
   ExternalLink,
   ShieldCheck,
@@ -36,6 +38,7 @@ export default function PaymentsPage() {
   const [payhereRefInput, setPayhereRefInput] = useState('')
   const [confirmPriceInput, setConfirmPriceInput] = useState('')
   const [sendTicketEmailOnConfirm, setSendTicketEmailOnConfirm] = useState(true)
+  const [sendTicketSmsOnConfirm, setSendTicketSmsOnConfirm] = useState(false)
   const [confirmingLoading, setConfirmingLoading] = useState(false)
 
   // Edit Buyer Modal state (Super Admin)
@@ -44,6 +47,7 @@ export default function PaymentsPage() {
   // Ticket Modal state
   const [selectedTicketBuyer, setSelectedTicketBuyer] = useState<Buyer | null>(null)
   const [sendingTicketId, setSendingTicketId] = useState<string | null>(null)
+  const [sendingTicketSmsId, setSendingTicketSmsId] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -99,16 +103,17 @@ export default function PaymentsPage() {
       payhereRefInput.trim(),
       confirmingBuyer,
       sendTicketEmailOnConfirm,
-      confirmPriceInput.trim() || undefined
+      confirmPriceInput.trim() || undefined,
+      sendTicketSmsOnConfirm
     )
     setConfirmingLoading(false)
 
     if (success) {
-      toast.success(
-        sendTicketEmailOnConfirm
-          ? `Payment confirmed! Ticket ${ticket_number} generated & emailed!`
-          : `Payment confirmed! Ticket ${ticket_number} generated!`
-      )
+      const dispatched: string[] = []
+      if (sendTicketEmailOnConfirm) dispatched.push('emailed')
+      if (sendTicketSmsOnConfirm) dispatched.push('SMS sent')
+      const extraMsg = dispatched.length > 0 ? ` (${dispatched.join(' + ')})` : ''
+      toast.success(`Payment confirmed! Ticket ${ticket_number} generated${extraMsg}!`)
       setConfirmingBuyer(null)
       setPayhereRefInput('')
       setConfirmPriceInput('')
@@ -132,6 +137,27 @@ export default function PaymentsPage() {
       loadData()
     } else {
       toast.error(`Failed to send ticket: ${error}`)
+    }
+  }
+
+  async function handleResendTicketSms(buyer: Buyer) {
+    if (isViewer) {
+      toast.error('View-only profile cannot dispatch ticket SMS.')
+      return
+    }
+    if (!buyer.mobile || !buyer.mobile.trim()) {
+      toast.error('Buyer does not have a mobile number.')
+      return
+    }
+    setSendingTicketSmsId(buyer.id)
+    const { success, error } = await sendBuyerTicketSms(buyer.id, buyer)
+    setSendingTicketSmsId(null)
+
+    if (success) {
+      toast.success(`Ticket SMS sent to ${buyer.mobile}`)
+      loadData()
+    } else {
+      toast.error(`Failed to send ticket SMS: ${error}`)
     }
   }
 
@@ -313,7 +339,8 @@ export default function PaymentsPage() {
                   <th>Ticket Number</th>
                   <th>PayHere Ref</th>
                   <th>Ticket Email</th>
-                  <th style={{ width: 140 }}>Actions</th>
+                  <th>Ticket SMS</th>
+                  <th style={{ width: 150 }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -436,7 +463,22 @@ export default function PaymentsPage() {
                         )}
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        {buyer.ticket_sms_status === 'sent' ? (
+                          <span style={{ fontSize: 11.5, color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <CheckCircle2 size={12} /> SMS Sent
+                          </span>
+                        ) : buyer.ticket_sms_status === 'sending' || sendingTicketSmsId === buyer.id ? (
+                          <span style={{ fontSize: 11.5, color: '#2563eb', fontWeight: 600 }}>Sending…</span>
+                        ) : buyer.ticket_sms_status === 'failed' ? (
+                          <span style={{ fontSize: 11.5, color: '#dc2626', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }} title={buyer.ticket_sms_error || 'Ticket SMS delivery failed'}>
+                            <AlertCircle size={12} /> Failed
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 11.5, color: '#94a3b8' }}>Not Sent</span>
+                        )}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'nowrap' }}>
                           {!isPaid ? (
                             isViewer ? (
                               <span style={{ fontSize: 11.5, color: '#94a3b8', fontStyle: 'italic' }}>Pending</span>
@@ -470,25 +512,40 @@ export default function PaymentsPage() {
                               <button
                                 className="btn btn-sm btn-secondary"
                                 onClick={() => setSelectedTicketBuyer(buyer)}
-                                style={{ padding: '4px 8px', fontSize: 11.5 }}
+                                style={{ padding: '4px 7px', fontSize: 11.5 }}
                                 title="View and Print Digital E-Ticket Pass"
                               >
-                                <QrCode size={13} /> Ticket
+                                <QrCode size={13} /> Pass
                               </button>
                               {!isViewer && (
-                                <button
-                                  className="btn btn-sm btn-secondary"
-                                  onClick={() => handleResendTicketEmail(buyer)}
-                                  disabled={sendingTicketId === buyer.id}
-                                  style={{ padding: '4px 8px', fontSize: 11.5 }}
-                                  title="Resend ticket email"
-                                >
-                                  {sendingTicketId === buyer.id ? (
-                                    <span className="spinner" style={{ width: 10, height: 10, borderWidth: 1.5 }} />
-                                  ) : (
-                                    <SendHorizonal size={12} />
-                                  )}
-                                </button>
+                                <>
+                                  <button
+                                    className="btn btn-sm btn-secondary"
+                                    onClick={() => handleResendTicketEmail(buyer)}
+                                    disabled={sendingTicketId === buyer.id}
+                                    style={{ padding: '4px 7px', fontSize: 11.5 }}
+                                    title={buyer.ticket_email_status === 'sent' ? 'Resend ticket email' : 'Send ticket email'}
+                                  >
+                                    {sendingTicketId === buyer.id ? (
+                                      <span className="spinner" style={{ width: 10, height: 10, borderWidth: 1.5 }} />
+                                    ) : (
+                                      <SendHorizonal size={12} />
+                                    )}
+                                  </button>
+                                  <button
+                                    className="btn btn-sm btn-secondary"
+                                    onClick={() => handleResendTicketSms(buyer)}
+                                    disabled={sendingTicketSmsId === buyer.id}
+                                    style={{ padding: '4px 7px', fontSize: 11.5 }}
+                                    title={buyer.ticket_sms_status === 'sent' ? 'Resend ticket SMS' : 'Send ticket SMS'}
+                                  >
+                                    {sendingTicketSmsId === buyer.id ? (
+                                      <span className="spinner" style={{ width: 10, height: 10, borderWidth: 1.5 }} />
+                                    ) : (
+                                      <Smartphone size={12} />
+                                    )}
+                                  </button>
+                                </>
                               )}
                               {isSuperAdmin && (
                                 <button
@@ -587,17 +644,32 @@ export default function PaymentsPage() {
                 </p>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '14px 0 20px', padding: '10px 12px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
-                <input
-                  type="checkbox"
-                  id="send_ticket_confirm_pay"
-                  checked={sendTicketEmailOnConfirm}
-                  onChange={(e) => setSendTicketEmailOnConfirm(e.target.checked)}
-                  style={{ width: 16, height: 16, cursor: 'pointer' }}
-                />
-                <label htmlFor="send_ticket_confirm_pay" style={{ fontSize: 12.5, color: '#166534', cursor: 'pointer', margin: 0, fontWeight: 600 }}>
-                  Email official E-Ticket pass to buyer immediately
-                </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, margin: '14px 0 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                  <input
+                    type="checkbox"
+                    id="send_ticket_confirm_pay"
+                    checked={sendTicketEmailOnConfirm}
+                    onChange={(e) => setSendTicketEmailOnConfirm(e.target.checked)}
+                    style={{ width: 16, height: 16, cursor: 'pointer' }}
+                  />
+                  <label htmlFor="send_ticket_confirm_pay" style={{ fontSize: 12.5, color: '#166534', cursor: 'pointer', margin: 0, fontWeight: 600 }}>
+                    Email official E-Ticket pass to buyer immediately
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                  <input
+                    type="checkbox"
+                    id="send_ticket_sms_confirm_pay"
+                    checked={sendTicketSmsOnConfirm}
+                    onChange={(e) => setSendTicketSmsOnConfirm(e.target.checked)}
+                    style={{ width: 16, height: 16, cursor: 'pointer' }}
+                  />
+                  <label htmlFor="send_ticket_sms_confirm_pay" style={{ fontSize: 12.5, color: '#166534', cursor: 'pointer', margin: 0, fontWeight: 600 }}>
+                    Send official Ticket Confirmation SMS to buyer mobile immediately
+                  </label>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>

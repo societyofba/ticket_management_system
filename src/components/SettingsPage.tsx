@@ -31,9 +31,10 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   email_from_address: 'noreply@cbaforum.lk',
   email_subject: 'You Are Invited – CBA Forum 2026',
   email_body: '',
-  sms_sender_id: 'SMSlenzDEMO',
+  sms_sender_id: 'CBAFORUM',
   sms_template: 'Hi {{name}}, you are eligible to participate in {{event_name}} at {{event_location}} on {{event_time}}. Ticket: {{ticket_price}}. Complete payment & book: {{payment_link}}',
   sms_auto_send: 'true',
+  ticket_sms_template: 'CBA Forum 2026 - Ticket Confirmed! Ticket: {{ticket_number}} | Ref: {{payment_ref}}. Name: {{name}}, Org: {{company}} ({{designation}}), Email: {{email}}, Mobile: {{mobile}}, Paid: {{ticket_price}}. Your ticket with the QR code has been sent to the email address above. Please check your inbox (if not in inbox, check spam). Inquiries: info@cbaforum.lk',
   ticket_email_subject: 'Your Official E-Ticket – CBA Forum 2026',
   ticket_terms: 'Please present this digital pass or printed copy at the entrance desk at Waters Edge Hotel.',
   ticket_email_template: `<div style="font-family:Arial,sans-serif;max-width:620px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.08);border:1px solid #e2e8f0;">
@@ -134,6 +135,20 @@ const TICKET_PLACEHOLDERS = [
   { tag: '{{ticket_price}}', desc: "Ticket Price" },
 ]
 
+const TICKET_SMS_PLACEHOLDERS = [
+  { tag: '{{name}}', desc: "Buyer's full name" },
+  { tag: '{{ticket_number}}', desc: "Unique Ticket # (e.g. CBA-2026-08AF)" },
+  { tag: '{{payment_ref}}', desc: "PayHere Transaction Ref" },
+  { tag: '{{email}}', desc: "Buyer's email" },
+  { tag: '{{mobile}}', desc: "Buyer's mobile" },
+  { tag: '{{company}}', desc: "Company / Organization" },
+  { tag: '{{designation}}', desc: "Job Title" },
+  { tag: '{{ticket_price}}', desc: "Paid Ticket Price" },
+  { tag: '{{event_name}}', desc: "Event Name" },
+  { tag: '{{event_location}}', desc: "Venue" },
+  { tag: '{{event_time}}', desc: "Event Time" },
+]
+
 export default function SettingsPage() {
   const { isSuperAdmin, isViewer, currentAdmin, logout } = useAuth()
   const [settings, setSettings] = useState<Record<string, string>>(DEFAULT_SETTINGS)
@@ -219,7 +234,25 @@ export default function SettingsPage() {
       .replace(/{{event_name}}/g, settings.event_name || 'CBA Forum 2026')
       .replace(/{{event_location}}/g, settings.event_location || 'Waters Edge Hotel')
       .replace(/{{event_time}}/g, settings.event_time || '3:00 PM – 7:00 PM')
-      .replace(/{{ticket_price}}/g, settings.ticket_price || 'LKR 3,000')
+      .replace(/{{ticket_price}}/g, settings.ticket_price || 'LKR 3,500')
+      .replace(/{{payment_link}}/g, settings.payment_link || 'https://pay.cbaforum.lk')
+  }
+
+  // Generate Confirmed Ticket SMS preview
+  function getPreviewTicketSms(): string {
+    return (settings.ticket_sms_template || '')
+      .replace(/{{name}}/g, 'Kamal Perera')
+      .replace(/{{email}}/g, 'kamal.perera@acme.lk')
+      .replace(/{{mobile}}/g, '+94 77 123 4567')
+      .replace(/{{company}}/g, 'Acme Holdings Ltd.')
+      .replace(/{{designation}}/g, 'Chief Financial Officer')
+      .replace(/{{meal_preference}}/g, 'Non-Veg')
+      .replace(/{{ticket_number}}/g, 'CBA-2026-08AF')
+      .replace(/{{payment_ref}}/g, 'PH-98421045')
+      .replace(/{{ticket_price}}/g, settings.ticket_price || 'LKR 3,500')
+      .replace(/{{event_name}}/g, settings.event_name || 'CBA Forum 2026')
+      .replace(/{{event_location}}/g, settings.event_location || 'Waters Edge Hotel')
+      .replace(/{{event_time}}/g, settings.event_time || '3:00 PM – 7:00 PM')
       .replace(/{{payment_link}}/g, settings.payment_link || 'https://pay.cbaforum.lk')
   }
 
@@ -820,15 +853,15 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* SMSlenz SMS Settings */}
+      {/* Text.lk SMS Settings */}
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Smartphone size={18} style={{ color: '#2563eb' }} />
-            <h2 className="card-title">Mobile SMS Settings (SMSlenz Gateway)</h2>
+            <h2 className="card-title">Mobile SMS Settings (Text.lk Gateway)</h2>
           </div>
           <span style={{ fontSize: 12, background: '#eff6ff', color: '#1d4ed8', padding: '3px 9px', borderRadius: 6, fontWeight: 600 }}>
-            Active: smslenz.lk
+            Active: text.lk
           </span>
         </div>
         <div className="card-body">
@@ -839,10 +872,10 @@ export default function SettingsPage() {
                 className="form-control"
                 value={settings.sms_sender_id}
                 onChange={(e) => handleChange('sms_sender_id', e.target.value)}
-                placeholder="SMSlenzDEMO"
+                placeholder="e.g. TextLKDemo or CBAFORUM"
               />
               <p className="form-hint">
-                Use <code>SMSlenzDEMO</code> for testing, or <code>CBAFORUM</code> once approved by SMSlenz.
+                Enter your approved Sender ID obtained from Text.lk (e.g. your organization's mask name).
               </p>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
@@ -864,7 +897,7 @@ export default function SettingsPage() {
 
           <div className="form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <label className="form-label" style={{ marginBottom: 0 }}>SMS Message Template</label>
+              <label className="form-label" style={{ marginBottom: 0 }}>Initial Invitation SMS Template (Before Payment)</label>
               <span style={{ fontSize: 12, color: '#8892aa' }}>
                 {(settings.sms_template || '').length} characters &bull;{' '}
                 <strong style={{ color: (settings.sms_template || '').length > 160 ? '#d97706' : '#15803d' }}>
@@ -874,34 +907,111 @@ export default function SettingsPage() {
             </div>
             <textarea
               className="form-control"
-              rows={4}
+              rows={3}
               value={settings.sms_template}
               onChange={(e) => handleChange('sms_template', e.target.value)}
               placeholder="Hi {{name}}, you are eligible to participate in {{event_name}}..."
-              style={{ fontFamily: 'monospace', fontSize: 13, lineHeight: 1.5 }}
+              style={{ fontFamily: 'monospace', fontSize: 12.5, lineHeight: 1.5 }}
             />
           </div>
 
-          {/* Live SMS Preview */}
-          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 14 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <MessageSquare size={13} /> Live SMS Preview:
+          {/* Live Invitation SMS Preview */}
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, marginBottom: 20 }}>
+            <p style={{ fontSize: 11.5, fontWeight: 700, color: '#475569', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <MessageSquare size={13} /> Live Invitation SMS Preview:
             </p>
             <div
               style={{
                 background: '#ffffff',
                 border: '1px solid #cbd5e1',
-                borderLeft: '4px solid #22c55e',
+                borderLeft: '4px solid #3b82f6',
                 borderRadius: 8,
-                padding: '12px 16px',
-                fontSize: 13,
-                lineHeight: 1.6,
+                padding: '10px 14px',
+                fontSize: 12.5,
+                lineHeight: 1.5,
                 color: '#1e293b',
                 whiteSpace: 'pre-wrap',
                 fontFamily: 'system-ui, sans-serif',
               }}
             >
               {getPreviewSms()}
+            </div>
+          </div>
+
+          <div className="divider" style={{ margin: '20px 0' }} />
+
+          {/* Confirmed Ticket SMS Section */}
+          <div className="form-group">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div>
+                <label className="form-label" style={{ marginBottom: 2 }}>Confirmed Ticket SMS Template (After Payment / Issue)</label>
+                <p style={{ fontSize: 11.5, color: '#64748b', margin: 0 }}>
+                  Sent automatically or manually in the <strong>Payments & Tickets</strong> tab when payment is confirmed.
+                </p>
+              </div>
+              <span style={{ fontSize: 12, color: '#8892aa', whiteSpace: 'nowrap', marginLeft: 12 }}>
+                {(settings.ticket_sms_template || '').length} characters &bull;{' '}
+                <strong style={{ color: (settings.ticket_sms_template || '').length > 160 ? '#d97706' : '#15803d' }}>
+                  {Math.ceil(Math.max(1, (settings.ticket_sms_template || '').length) / 160)} SMS credit{Math.ceil(Math.max(1, (settings.ticket_sms_template || '').length) / 160) > 1 ? 's' : ''}
+                </strong>
+              </span>
+            </div>
+            <textarea
+              className="form-control"
+              rows={4}
+              value={settings.ticket_sms_template}
+              onChange={(e) => handleChange('ticket_sms_template', e.target.value)}
+              placeholder="CBA Forum 2026 - Ticket Confirmed! Ticket: {{ticket_number}}..."
+              style={{ fontFamily: 'monospace', fontSize: 12.5, lineHeight: 1.5 }}
+            />
+          </div>
+
+          {/* Placeholders for Confirmed Ticket SMS */}
+          <div style={{ marginBottom: 14 }}>
+            <p style={{ fontSize: 11.5, fontWeight: 700, color: '#475569', marginBottom: 6 }}>
+              Available Placeholders for Confirmed Ticket SMS:
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {TICKET_SMS_PLACEHOLDERS.map(({ tag, desc }) => (
+                <div
+                  key={tag}
+                  title={desc}
+                  style={{
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: 6,
+                    padding: '2px 7px',
+                    fontSize: 11.5,
+                    color: '#15803d',
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  {tag}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Live Confirmed Ticket SMS Preview */}
+          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: 12 }}>
+            <p style={{ fontSize: 11.5, fontWeight: 700, color: '#166534', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <CheckCircle2 size={13} /> Live Confirmed Ticket SMS Preview:
+            </p>
+            <div
+              style={{
+                background: '#ffffff',
+                border: '1px solid #86efac',
+                borderLeft: '4px solid #22c55e',
+                borderRadius: 8,
+                padding: '10px 14px',
+                fontSize: 12.5,
+                lineHeight: 1.5,
+                color: '#14532d',
+                whiteSpace: 'pre-wrap',
+                fontFamily: 'system-ui, sans-serif',
+              }}
+            >
+              {getPreviewTicketSms()}
             </div>
           </div>
         </div>

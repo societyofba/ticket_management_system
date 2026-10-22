@@ -47,6 +47,9 @@ export interface Buyer {
   ticket_email_status: 'not_sent' | 'sending' | 'sent' | 'failed'
   ticket_email_sent_at: string | null
   ticket_email_error: string | null
+  ticket_sms_status?: 'not_sent' | 'sending' | 'sent' | 'failed'
+  ticket_sms_sent_at?: string | null
+  ticket_sms_error?: string | null
   checked_in: boolean
   checked_in_at: string | null
   ticket_price?: string | null
